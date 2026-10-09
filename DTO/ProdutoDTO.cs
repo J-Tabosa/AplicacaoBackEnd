@@ -14,7 +14,9 @@ public class ProdutoDTO
     [StringLength(200)]
     public string? DescricaoItem { get; set; }
 
-    [Range(typeof(decimal), "0", "99999999.99")]
+    [Range(typeof(decimal), "0", "99999999.99",
+        ParseLimitsInInvariantCulture = true,
+        ConvertValueInInvariantCulture = true)]
     public decimal Preco { get; set; }
 
     [Required, RegularExpression("^P$", ErrorMessage = "O tipo do produto deve ser P.")]
@@ -26,7 +28,9 @@ public class ProdutoDTO
     // Dados da tabela produto.
     public int CodigoPreco { get; set; }
 
-    [Range(typeof(decimal), "0", "99999999.99")]
+    [Range(typeof(decimal), "0", "99999999.99",
+        ParseLimitsInInvariantCulture = true,
+        ConvertValueInInvariantCulture = true)]
     public decimal PrecoVenda { get; set; }
 
     [Required, StringLength(10)]
