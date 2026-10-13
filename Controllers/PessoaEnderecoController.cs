@@ -15,8 +15,7 @@ public class PessoaEnderecoController : ControllerBase
         _context = context;
     }
 
-    // GET: api/PessoaEndereco ou api/PessoaEndereco/all
-    [HttpGet]
+    // GET: api/PessoaEndereco/all
     [HttpGet("all")]
     public async Task<IActionResult> GetPessoasEnderecos()
     {
