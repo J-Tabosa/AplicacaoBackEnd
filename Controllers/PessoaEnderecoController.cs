@@ -15,6 +15,39 @@ public class PessoaEnderecoController : ControllerBase
         _context = context;
     }
 
+    // GET: api/PessoaEndereco ou api/PessoaEndereco/all
+    [HttpGet]
+    [HttpGet("all")]
+    public async Task<IActionResult> GetPessoasEnderecos()
+    {
+        var pessoas = await _context.Pessoas
+            .AsNoTracking()
+            .OrderBy(p => p.Idpessoa)
+            .Select(p => new
+            {
+                p.Idpessoa,
+                p.Nome,
+                p.Cpf,
+                p.DataNascimento,
+                p.Sexo,
+                p.Email,
+                p.Telefone,
+                p.AtivoPessoa,
+                Enderecos = p.Enderecos
+                    .OrderBy(e => e.Idendereco)
+                    .Select(e => new
+                    {
+                        e.Idendereco,
+                        e.Cep,
+                        e.Numero,
+                        e.Complemento
+                    }).ToList()
+            })
+            .ToListAsync();
+
+        return Ok(pessoas);
+    }
+
     // GET: api/PessoaEndereco/5
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetPessoaEndereco(int id)
