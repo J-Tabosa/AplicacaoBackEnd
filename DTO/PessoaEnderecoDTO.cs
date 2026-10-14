@@ -25,6 +25,6 @@ public class PessoaEnderecoDTO
     public string AtivoPessoa { get; set; } = "S";
 
     // Envie a lista explicitamente. No PUT ela representa a lista final de endereços.
-    [Required]
+    [Required, MinLength(1)]
     public List<EnderecoDTO> Enderecos { get; set; } = null!;
 }

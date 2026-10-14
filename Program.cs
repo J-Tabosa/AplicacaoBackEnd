@@ -1,11 +1,16 @@
 using AplicacaoBackEnd.Models;
 using Microsoft.EntityFrameworkCore;
+using AplicacaoBackEnd.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
-builder.Services.AddControllers();
+builder.Services.AddControllers(options => options.Filters.Add<ApiExceptionFilter>());
+builder.Services.AddScoped<PessoaService>();
+builder.Services.AddScoped<EstoqueService>();
+builder.Services.AddScoped<AtendimentoService>();
+builder.Services.AddScoped<ItemService>();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

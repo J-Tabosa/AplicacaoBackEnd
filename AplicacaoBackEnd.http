@@ -1,6 +1,31 @@
-@AplicacaoBackEnd_HostAddress = http://localhost:5290
+@baseUrl = https://localhost:7067
 
-GET {{AplicacaoBackEnd_HostAddress}}/weatherforecast/
+### Pessoas e endereços
+GET {{baseUrl}}/api/PessoaEndereco/all
 Accept: application/json
 
-###
+### Funcionários completos
+GET {{baseUrl}}/api/Funcionario/all
+Accept: application/json
+
+### Categorias
+GET {{baseUrl}}/api/Categoriums
+Accept: application/json
+
+### Produtos e serviços
+GET {{baseUrl}}/api/Items
+Accept: application/json
+
+### Produtos
+GET {{baseUrl}}/api/ProdutoItem
+Accept: application/json
+
+### Entradas de produtos
+GET {{baseUrl}}/api/EntradaProduto/all
+Accept: application/json
+
+### Atendimentos completos
+GET {{baseUrl}}/api/Atendimento/all
+Accept: application/json
+
+### Consulte README.md e /swagger para os JSONs de POST e PUT.

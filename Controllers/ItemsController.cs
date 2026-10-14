@@ -1,107 +1,54 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
+using AplicacaoBackEnd.DTO;
+using AplicacaoBackEnd.Models;
+using AplicacaoBackEnd.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using AplicacaoBackEnd.Models;
+using System.Data;
 
-namespace AplicacaoBackEnd.Controllers
+namespace AplicacaoBackEnd.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class ItemsController : ControllerBase
 {
-    [Route("api/[controller]")]
-    [ApiController]
-    public class ItemsController : ControllerBase
+    private readonly DbAtendimentoContext _context;
+    private readonly ItemService _itens;
+    public ItemsController(DbAtendimentoContext context, ItemService itens) { _context = context; _itens = itens; }
+
+    [HttpGet]
+    public async Task<ActionResult<List<ItemRespostaDTO>>> GetItems()
     {
-        private readonly DbAtendimentoContext _context;
+        var itens = await _itens.Consulta().OrderBy(i => i.Iditem).ToListAsync();
+        return Ok(itens.Select(ApiMapeamento.Item).ToList());
+    }
 
-        public ItemsController(DbAtendimentoContext context)
-        {
-            _context = context;
-        }
+    [HttpGet("{id:int}")]
+    public async Task<ActionResult<ItemRespostaDTO>> GetItem(int id) => Ok(ApiMapeamento.Item(await _itens.ObterAsync(id)));
 
-        // GET: api/Items
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<Item>>> GetItems()
-        {
-            return await _context.Items.ToListAsync();
-        }
+    [HttpPost]
+    public async Task<ActionResult<ItemRespostaDTO>> PostItem(ItemDTO dados)
+    {
+        await using var transacao = await _context.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted);
+        var item = await _itens.CriarAsync(dados);
+        await transacao.CommitAsync();
+        return CreatedAtAction(nameof(GetItem), new { id = item.Iditem }, ApiMapeamento.Item(item));
+    }
 
-        // GET: api/Items/5
-        [HttpGet("{id}")]
-        public async Task<ActionResult<Item>> GetItem(int id)
-        {
-            var item = await _context.Items.FindAsync(id);
+    [HttpPut("{id:int}")]
+    public async Task<IActionResult> PutItem(int id, ItemDTO dados)
+    {
+        await using var transacao = await _context.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted);
+        await _itens.AtualizarAsync(id, dados);
+        await transacao.CommitAsync();
+        return NoContent();
+    }
 
-            if (item == null)
-            {
-                return NotFound();
-            }
-
-            return item;
-        }
-
-        // PUT: api/Items/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutItem(int id, Item item)
-        {
-            if (id != item.Iditem)
-            {
-                return BadRequest();
-            }
-
-            _context.Entry(item).State = EntityState.Modified;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!ItemExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
-
-            return NoContent();
-        }
-
-        // POST: api/Items
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPost]
-        public async Task<ActionResult<Item>> PostItem(Item item)
-        {
-            _context.Items.Add(item);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction("GetItem", new { id = item.Iditem }, item);
-        }
-
-        // DELETE: api/Items/5
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteItem(int id)
-        {
-            var item = await _context.Items.FindAsync(id);
-            if (item == null)
-            {
-                return NotFound();
-            }
-
-            _context.Items.Remove(item);
-            await _context.SaveChangesAsync();
-
-            return NoContent();
-        }
-
-        private bool ItemExists(int id)
-        {
-            return _context.Items.Any(e => e.Iditem == id);
-        }
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> DeleteItem(int id)
+    {
+        await using var transacao = await _context.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted);
+        await _itens.ExcluirAsync(id);
+        await transacao.CommitAsync();
+        return NoContent();
     }
 }
