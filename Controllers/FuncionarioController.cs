@@ -48,33 +48,62 @@ public class FuncionarioController : ControllerBase
 
     // POST: api/Funcionario
     [HttpPost]
-    public async Task<IActionResult> PostFuncionario(FuncionarioDTO dados)
+    public async Task<IActionResult> PostFuncionario(FuncionarioCadastroDTO dados)
     {
         if (dados.DataAdmissao < new DateOnly(1000, 1, 1))
             return BadRequest(new { mensagem = "INFORME UMA DATA DE ADMISSÃO VÁLIDA." });
 
-        var pessoa = await _context.Pessoas
-            .Include(p => p.Enderecos)
-            .FirstOrDefaultAsync(p => p.Idpessoa == dados.IdPessoa);
+        if (dados.DataNascimento < new DateOnly(1000, 1, 1))
+            return BadRequest(new { mensagem = "INFORME UMA DATA DE NASCIMENTO VÁLIDA." });
 
-        if (pessoa == null)
-            return NotFound(new { mensagem = "CADASTRE A PESSOA ANTES DE REGISTRAR O FUNCIONÁRIO." });
+        if (dados.Enderecos.Any(e => e == null || e.Idendereco != 0))
+            return BadRequest(new { mensagem = "ENVIE ENDEREÇOS NOVOS, SEM ID OU COM ID IGUAL A ZERO." });
 
-        if (await _context.Funcionarios.AnyAsync(f => f.Idpessoa == dados.IdPessoa))
-            return Conflict(new { mensagem = "ESTA PESSOA JÁ ESTÁ CADASTRADA COMO FUNCIONÁRIO." });
+        if (await _context.Pessoas.AnyAsync(p => p.Cpf == dados.Cpf))
+            return Conflict(new { mensagem = "JÁ EXISTE UMA PESSOA COM ESTE CPF." });
 
-        var funcionario = new Funcionario
-        {
-            Idpessoa = pessoa.Idpessoa,
-            IdpessoaNavigation = pessoa,
-            Cargo = dados.Cargo,
-            DataAdmissao = dados.DataAdmissao.GetValueOrDefault()
-        };
+        // As três tabelas devem ser cadastradas juntas ou nenhuma será gravada.
+        await using var transaction = await _context.Database.BeginTransactionAsync();
 
         try
         {
+            var pessoa = new Pessoa
+            {
+                Nome = dados.Nome,
+                Cpf = dados.Cpf,
+                DataNascimento = dados.DataNascimento.GetValueOrDefault(),
+                Sexo = dados.Sexo,
+                Email = dados.Email,
+                Telefone = dados.Telefone,
+                AtivoPessoa = dados.AtivoPessoa
+            };
+
+            foreach (var dadosEndereco in dados.Enderecos)
+            {
+                pessoa.Enderecos.Add(new Endereco
+                {
+                    Cep = dadosEndereco.Cep,
+                    Numero = dadosEndereco.Numero,
+                    Complemento = dadosEndereco.Complemento
+                });
+            }
+
+            // O EF gera o ID da pessoa e o utiliza em seus endereços.
+            _context.Pessoas.Add(pessoa);
+            await _context.SaveChangesAsync();
+
+            // Usa o ID recém-gerado para cadastrar o funcionário.
+            var funcionario = new Funcionario
+            {
+                Idpessoa = pessoa.Idpessoa,
+                IdpessoaNavigation = pessoa,
+                Cargo = dados.Cargo,
+                DataAdmissao = dados.DataAdmissao.GetValueOrDefault()
+            };
+
             _context.Funcionarios.Add(funcionario);
             await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
 
             return CreatedAtAction(
                 nameof(GetFuncionario),
@@ -83,15 +112,19 @@ public class FuncionarioController : ControllerBase
         }
         catch (DbUpdateException ex)
         {
-            _logger.LogError(ex, "Erro ao cadastrar o funcionário {Id}.", dados.IdPessoa);
+            await transaction.RollbackAsync();
+            _logger.LogError(ex, "Erro ao cadastrar pessoa, endereços e funcionário.");
 
-            if (await _context.Funcionarios.AsNoTracking().AnyAsync(f => f.Idpessoa == dados.IdPessoa))
-                return Conflict(new { mensagem = "ESTA PESSOA JÁ ESTÁ CADASTRADA COMO FUNCIONÁRIO." });
+            if (await _context.Pessoas.AsNoTracking().AnyAsync(p => p.Cpf == dados.Cpf))
+                return Conflict(new { mensagem = "JÁ EXISTE UMA PESSOA COM ESTE CPF." });
 
-            if (!await _context.Pessoas.AsNoTracking().AnyAsync(p => p.Idpessoa == dados.IdPessoa))
-                return NotFound(new { mensagem = "PESSOA NÃO LOCALIZADA!" });
-
-            return StatusCode(500, new { mensagem = "ERRO NO CADASTRO DO FUNCIONÁRIO." });
+            return StatusCode(500, new { mensagem = "ERRO NO CADASTRO DA PESSOA, DOS ENDEREÇOS E DO FUNCIONÁRIO." });
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
+            _logger.LogError(ex, "Erro ao cadastrar pessoa, endereços e funcionário.");
+            return StatusCode(500, new { mensagem = "ERRO NO CADASTRO DA PESSOA, DOS ENDEREÇOS E DO FUNCIONÁRIO." });
         }
     }
 
