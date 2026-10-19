@@ -191,6 +191,38 @@ for status, result in results:
 stock(c, 5)
 print('OK: duas vendas simultâneas não produzem estoque negativo', flush=True)
 
+# Rotas equivalentes devem continuar usando os mesmos dados e validações.
+call('PUT', f'Categoriums/{categoria}', {'categoria': 'Categoria atualizada'}, 204)
+assert call('GET', f'Categoriums/{categoria}')['categoria'] == 'Categoria atualizada'
+call('DELETE', f'Categoriums/{categoria}', expected=409)
+
+produto_atualizado = dict(produto, item='Produto A atualizado', precoVenda=15.90)
+call('PUT', f'ProdutoItem/{a}', produto_atualizado, 204)
+assert call('GET', f'ProdutoItem/{a}')['precoVenda'] == 15.90
+b_data['produto']['precoVenda'] = 35.90
+call('PUT', f'Items/{b}', b_data, 204)
+assert call('GET', f'Items/{b}')['produto']['precoVenda'] == 35.90
+call('GET', f'ProdutoItem/{s}', expected=404)
+assert any(p['idItem'] == a for p in call('GET', 'ProdutoItem'))
+call('PUT', f'Items/{s}', dict(servico_data, tipoItem='P', produto=b_data['produto']), 409)
+
+cliente_atual = call('GET', f'PessoaEndereco/{cliente_id}')
+cliente_data['nome'] = 'Cliente atualizado'
+cliente_data['enderecos'] = [dict(cliente_atual['enderecos'][0])]
+call('PUT', f'PessoaEndereco/{cliente_id}', cliente_data, 204)
+cliente_atual = call('GET', f'PessoaEndereco/{cliente_id}')
+assert cliente_atual['nome'] == 'Cliente atualizado' and len(cliente_atual['enderecos']) == 1
+
+# Respostas inválidas não podem alterar um cadastro já existente.
+call('PUT', f'PessoaEndereco/{cliente_id}', dict(cliente_data, enderecos=[]), 400)
+call('PUT', f'Funcionario/{func_id}', dict(func_data, dataAdmissao=None), 400)
+call('PUT', f'Funcionario/{func_id}', dict(func_data, enderecos=[dict(cliente_atual['enderecos'][0])]), 400)
+assert call('GET', f'Funcionario/{func_id}')['cargo'] == 'Supervisor'
+call('POST', 'ProdutoItem', dict(produto, precoVenda=-1), 400)
+call('POST', 'Items', dict(servico_data, produto=b_data['produto']), 400)
+call('POST', 'EntradaProduto', dict(entry(a, 1), dataEntradaProduto=None), 400)
+print('OK: categorias, PUT dos dois cadastros de produto, pessoa e validações dos DTOs', flush=True)
+
 call('DELETE', f'EntradaProduto/{e1}', expected=204)
 call('DELETE', f'EntradaProduto/{e3}', expected=204)
 for item in (a, b, c):

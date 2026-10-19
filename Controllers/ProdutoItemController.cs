@@ -1,66 +1,266 @@
 using AplicacaoBackEnd.DTO;
 using AplicacaoBackEnd.Models;
-using AplicacaoBackEnd.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
 
 namespace AplicacaoBackEnd.Controllers;
 
-[ApiController]
 [Route("api/[controller]")]
+[ApiController]
 public class ProdutoItemController : ControllerBase
 {
     private readonly DbAtendimentoContext _context;
-    private readonly ItemService _itens;
-    public ProdutoItemController(DbAtendimentoContext context, ItemService itens) { _context = context; _itens = itens; }
+    private readonly ILogger<ProdutoItemController> _logger;
 
-    private static ItemDTO Converter(ProdutoDTO dados) => new()
+    public ProdutoItemController(DbAtendimentoContext context, ILogger<ProdutoItemController> logger)
     {
-        IdCategoria = dados.IdCategoria, Item = dados.Item, DescricaoItem = dados.DescricaoItem,
-        Preco = dados.Preco, TipoItem = "P", AtivoProdutoServico = dados.AtivoProdutoServico,
-        Produto = new ProdutoDadosDTO { CodigoPreco = dados.CodigoPreco, PrecoVenda = dados.PrecoVenda, Unidade = dados.Unidade }
-    };
+        _context = context;
+        _logger = logger;
+    }
 
     [HttpGet]
-    public async Task<ActionResult<List<ProdutoRespostaDTO>>> GetProdutos()
+    public async Task<IActionResult> GetProdutos()
     {
-        var itens = await _itens.Consulta().Where(i => i.Produto != null).OrderBy(i => i.Iditem).ToListAsync();
-        return Ok(itens.Select(i => ApiMapeamento.Produto(i.Produto!)).ToList());
+        var itens = await _context.Items
+            .Include(i => i.IdcategoriaNavigation)
+            .Include(i => i.Produto)
+            .Where(i => i.Produto != null)
+            .AsNoTracking()
+            .OrderBy(i => i.Iditem)
+            .ToListAsync();
+
+        var resposta = new List<ProdutoRespostaDTO>();
+        foreach (var item in itens)
+        {
+            resposta.Add(ExibirProduto(item));
+        }
+
+        return Ok(resposta);
     }
 
     [HttpGet("{id:int}")]
-    public async Task<ActionResult<ProdutoRespostaDTO>> GetProduto(int id)
+    public async Task<IActionResult> GetProduto(int id)
     {
-        var item = await _itens.ObterAsync(id);
-        if (item.Produto == null) throw new RegraNegocioException(404, "Produto não localizado.");
-        return Ok(ApiMapeamento.Produto(item.Produto));
+        var item = await _context.Items
+            .Include(i => i.IdcategoriaNavigation)
+            .Include(i => i.Produto)
+            .Where(i => i.Produto != null)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(i => i.Iditem == id);
+
+        if (item == null)
+        {
+            return NotFound(new { mensagem = "Produto não localizado." });
+        }
+
+        return Ok(ExibirProduto(item));
     }
 
     [HttpPost]
-    public async Task<ActionResult<ProdutoRespostaDTO>> PostProduto(ProdutoDTO dados)
+    public async Task<IActionResult> PostProduto(ProdutoDTO dados)
     {
+        if (!await _context.Categoria.AnyAsync(c => c.Idcategoria == dados.IdCategoria))
+        {
+            return NotFound(new { mensagem = "Categoria não localizada." });
+        }
+
         await using var transacao = await _context.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted);
-        var item = await _itens.CriarAsync(Converter(dados));
-        await transacao.CommitAsync();
-        return CreatedAtAction(nameof(GetProduto), new { id = item.Iditem }, ApiMapeamento.Produto(item.Produto!));
+        try
+        {
+            var item = new Item();
+            item.Idcategoria = dados.IdCategoria;
+            item.Item1 = dados.Item;
+            item.DescricaoItem = dados.DescricaoItem;
+            item.Preco = dados.Preco;
+            item.TipoItem = dados.TipoItem;
+            item.AtivoProdutoServico = dados.AtivoProdutoServico;
+
+            _context.Items.Add(item);
+            await _context.SaveChangesAsync();
+
+            if (dados.TipoItem == "P")
+            {
+                var produto = new Produto
+                {
+                    Iditem = item.Iditem,
+                    IditemNavigation = item
+                };
+                produto.CodigoPreco = dados.CodigoPreco;
+                produto.PrecoVenda = dados.PrecoVenda;
+                produto.Unidade = dados.Unidade;
+
+                _context.Produtos.Add(produto);
+                // A trigger de produto cria o estoque zerado.
+                await _context.SaveChangesAsync();
+            }
+
+            var itemCadastrado = await _context.Items
+                .Include(i => i.IdcategoriaNavigation)
+                .Include(i => i.Produto)
+                .Where(i => i.Produto != null)
+                .AsNoTracking()
+                .FirstAsync(i => i.Iditem == item.Iditem);
+
+            await transacao.CommitAsync();
+            return CreatedAtAction(nameof(GetProduto), new { id = item.Iditem }, ExibirProduto(itemCadastrado));
+        }
+        catch (DbUpdateException ex)
+        {
+            await transacao.RollbackAsync();
+            _logger.LogError(ex, "Erro ao gravar os dados no banco.");
+            return Conflict(new { mensagem = "Não foi possível gravar. Confira os vínculos e se os dados já foram cadastrados." });
+        }
     }
 
     [HttpPut("{id:int}")]
     public async Task<IActionResult> PutProduto(int id, ProdutoDTO dados)
     {
         await using var transacao = await _context.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted);
-        await _itens.AtualizarAsync(id, Converter(dados), exigirProduto: true);
-        await transacao.CommitAsync();
-        return NoContent();
+        try
+        {
+            var registros = await _context.Items
+                .FromSqlInterpolated($"SELECT * FROM item WHERE iditem = {id} FOR UPDATE")
+                .ToListAsync();
+            var item = registros.FirstOrDefault();
+
+            if (item == null)
+            {
+                return NotFound(new { mensagem = "Item não localizado." });
+            }
+
+            await _context.Entry(item).Reference(i => i.Produto).LoadAsync();
+
+            if (item.Produto == null)
+            {
+                return NotFound(new { mensagem = "Produto não localizado." });
+            }
+
+            if (item.TipoItem != dados.TipoItem)
+            {
+                return Conflict(new { mensagem = "Não é permitido converter produto em serviço ou serviço em produto." });
+            }
+
+            if (!await _context.Categoria.AnyAsync(c => c.Idcategoria == dados.IdCategoria))
+            {
+                return NotFound(new { mensagem = "Categoria não localizada." });
+            }
+
+            item.Idcategoria = dados.IdCategoria;
+            item.Item1 = dados.Item;
+            item.DescricaoItem = dados.DescricaoItem;
+            item.Preco = dados.Preco;
+            item.TipoItem = dados.TipoItem;
+            item.AtivoProdutoServico = dados.AtivoProdutoServico;
+
+            if (dados.TipoItem == "P")
+            {
+                var produto = item.Produto;
+                if (produto == null)
+                {
+                    return Conflict(new { mensagem = "O item não possui cadastro de produto." });
+                }
+
+                produto.CodigoPreco = dados.CodigoPreco;
+                produto.PrecoVenda = dados.PrecoVenda;
+                produto.Unidade = dados.Unidade;
+            }
+
+            await _context.SaveChangesAsync();
+            await transacao.CommitAsync();
+            return NoContent();
+        }
+        catch (DbUpdateException ex)
+        {
+            await transacao.RollbackAsync();
+            _logger.LogError(ex, "Erro ao gravar os dados no banco.");
+            return Conflict(new { mensagem = "Não foi possível gravar. Confira os vínculos e se os dados já foram cadastrados." });
+        }
     }
 
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> DeleteProduto(int id)
     {
         await using var transacao = await _context.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted);
-        await _itens.ExcluirAsync(id, exigirProduto: true);
-        await transacao.CommitAsync();
-        return NoContent();
+        try
+        {
+            var registros = await _context.Items
+                .FromSqlInterpolated($"SELECT * FROM item WHERE iditem = {id} FOR UPDATE")
+                .ToListAsync();
+            var item = registros.FirstOrDefault();
+
+            if (item == null)
+            {
+                return NotFound(new { mensagem = "Item não localizado." });
+            }
+
+            await _context.Entry(item).Reference(i => i.Produto).LoadAsync();
+
+            if (item.Produto == null)
+            {
+                return NotFound(new { mensagem = "Produto não localizado." });
+            }
+
+            if (await _context.Atendimentoitems.AnyAsync(a => a.Iditem == id)
+                || await _context.EntradaProdutos.AnyAsync(e => e.Iditem == id))
+            {
+                return Conflict(new { mensagem = "O item possui atendimentos ou entradas. Desative-o pelo PUT." });
+            }
+
+            if (item.Produto != null)
+            {
+                var estoques = await _context.Estoques
+                    .FromSqlInterpolated($"SELECT * FROM estoque WHERE iditem = {id} FOR UPDATE")
+                    .ToListAsync();
+                var estoque = estoques.FirstOrDefault();
+
+                if (estoque == null)
+                {
+                    return Conflict(new { mensagem = "Produto sem estoque. Confira a trigger de cadastro." });
+                }
+
+                if (estoque.QuantidadeEstoque != 0)
+                {
+                    return Conflict(new { mensagem = "O produto ainda possui saldo em estoque." });
+                }
+
+                _context.Estoques.Remove(estoque);
+                _context.Produtos.Remove(item.Produto);
+            }
+
+            _context.Items.Remove(item);
+            await _context.SaveChangesAsync();
+            await transacao.CommitAsync();
+            return NoContent();
+        }
+        catch (DbUpdateException ex)
+        {
+            await transacao.RollbackAsync();
+            _logger.LogError(ex, "Erro ao gravar os dados no banco.");
+            return Conflict(new { mensagem = "Não foi possível gravar. Confira os vínculos e se os dados já foram cadastrados." });
+        }
+    }
+
+    private ProdutoRespostaDTO ExibirProduto(Item item)
+    {
+        var resposta = new ProdutoRespostaDTO
+        {
+            IdItem = item.Iditem,
+            IdCategoria = item.Idcategoria,
+            Item = item.Item1,
+            DescricaoItem = item.DescricaoItem,
+            Preco = item.Preco,
+            TipoItem = item.TipoItem,
+            AtivoProdutoServico = item.AtivoProdutoServico
+        };
+
+        if (item.Produto != null)
+        {
+            resposta.CodigoPreco = item.Produto.CodigoPreco;
+            resposta.PrecoVenda = item.Produto.PrecoVenda;
+            resposta.Unidade = item.Produto.Unidade;
+        }
+
+        return resposta;
     }
 }

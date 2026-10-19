@@ -125,22 +125,54 @@ O PUT completo recebe a lista final de itens. A API adiciona novos, altera os ex
 ## Regras de estoque e transações
 
 - O esquema atual usa INT em quantidade_estoque e quantidade_item. A API aceita apenas quantidades inteiras positivas, inclusive nas entradas, para evitar perda de frações.
-- As triggers originais agem apenas no INSERT. Os services fazem as compensações de UPDATE e DELETE. Não instale outras triggers para essas compensações sem adaptar a API, pois isso duplicaria a movimentação.
+- As triggers originais agem apenas no INSERT. Os controllers fazem as compensações de UPDATE e DELETE. Não instale outras triggers para essas compensações sem adaptar a API, pois isso duplicaria a movimentação.
 - Operações compostas usam transação. Uma falha desfaz o cadastro ou a alteração inteira.
 - Os saldos são bloqueados com SELECT ... FOR UPDATE, em ordem de produto, durante movimentações da API.
 - Alterações diretas no banco fora da API devem respeitar as mesmas regras.
 
-## Organização
+## Organização e como ler o código
 
-- DTO: contratos de entrada e saída; entidades do EF não são expostas diretamente.
-- Controllers: rotas, respostas HTTP e limites das transações.
-- Services/PessoaService: reutiliza o cadastro e a atualização de pessoa/endereço no funcionário.
-- Services/ItemService: regras comuns de produtos e serviços.
-- Services/EstoqueService: bloqueio de saldo, limites e recomposição de preço.
-- Services/AtendimentoService: sincronização da associação N:N e compensação de estoque.
-- Services/ApiExceptionFilter: converte validações, conflitos de chave e erros do banco em respostas da API; detalhes internos ficam no log.
+As rotas, consultas, validações e gravações ficam nos próprios controllers. Não há pasta Services nem DTO herdando de outro DTO.
 
-Respostas usuais: 200 consulta, 201 criação, 204 alteração/exclusão, 400 dados inválidos, 404 registro ausente e 409 conflito de estoque ou relacionamento.
+- `Models`: classes que representam as tabelas, geradas a partir do banco.
+- `DTO`: classes com os campos do JSON. Cada classe fica em um arquivo com o mesmo nome.
+- DTOs como `FuncionarioCadastroDTO` recebem os dados enviados no POST/PUT.
+- DTOs terminados em `RespostaDTO` definem os campos que a API devolve no GET/POST. `ProdutoDadosDTO` recebe a parte `produto` do item e `ProdutoResumoDTO` devolve essa parte com o saldo.
+- `Controllers`: recebem a requisição, conferem os dados, usam `_context` para acessar o banco e devolvem a resposta HTTP.
+
+Para acompanhar um cadastro de funcionário, abra `FuncionarioController.cs` e procure `PostFuncionario`. Ele confere os dados, monta a pessoa com seus endereços, salva para obter o ID, cria o funcionário com esse ID e confirma a transação. `PutFuncionario` atualiza essas três partes no mesmo método.
+
+Métodos privados como `ExibirFuncionario` apenas montam o DTO de saída. No `AtendimentoController`, `AtualizarItens` concentra a regra repetida nas rotas do atendimento e dos itens. Ele também fica no controller: retorna uma resposta de erro quando há problema e `null` quando a atualização deu certo. Isso evita escrever a mesma movimentação de estoque em cada rota.
+
+O nome `builder.Services` em `Program.cs` pertence à configuração do ASP.NET. Ele registra o contexto do banco e os recursos da API; não representa uma camada de services criada no projeto.
+
+### Termos que aparecem nos DTOs e controllers
+
+| Código | Significado |
+|---|---|
+| `{ get; set; }` | Permite ler e preencher a propriedade. |
+| `string.Empty` | Texto vazio usado como valor inicial. |
+| `?`, como em `DateOnly?` | O campo pode estar sem valor. Com `[Required]`, uma requisição sem esse campo é recusada. |
+| `!` depois de uma referência, como `p!` | Avisa ao compilador que, naquele trecho, a referência será tratada como preenchida. Não é o mesmo que `!=` ou negar uma condição. |
+| `new List<EnderecoDTO>()` | Cria uma lista vazia de endereços. |
+| `[Required]` | Campo obrigatório. |
+| `[StringLength(100)]` | Limita o tamanho do texto. |
+| `[Range(0.0, 99999999.99)]` | Define o intervalo numérico permitido, sem converter limites escritos como texto. |
+| `[RegularExpression("^[SN]$")]` | Aceita somente S ou N. A validação de P/S segue a mesma ideia. |
+| `async`, `Task` e `await` | Permitem esperar uma consulta ou gravação no banco sem ocupar a execução enquanto ela termina. |
+| `Include` / `ThenInclude` | Carregam os registros relacionados, como funcionário → pessoa → endereços. |
+| `AsNoTracking` | Indica uma consulta para leitura, sem acompanhar os dados para atualização. |
+| `OrderBy` | Ordena os resultados. |
+| `foreach` | Percorre uma lista para montar a resposta ou atualizar cada registro. |
+| `Any` / `FirstOrDefault` | Verifica se existe um registro / procura o primeiro, retornando `null` se não houver. |
+| `SaveChangesAsync` | Envia as alterações para o banco. Dentro de uma transação, ainda podem ser desfeitas. |
+| `CommitAsync` / `RollbackAsync` | Confirma / desfaz a transação. Sair de um `await using` sem confirmar também desfaz as alterações. |
+| `FOR UPDATE` | Bloqueia temporariamente o registro durante a transação para evitar que duas operações usem o mesmo saldo ao mesmo tempo. |
+| `FromSqlInterpolated` | Executa a consulta SQL parametrizada; os valores entre chaves são enviados como parâmetros. |
+
+As verificações que dependem de outros campos ou do banco usam `if` no controller. Os DTOs não implementam interfaces de validação e não usam `yield`.
+
+Respostas usuais: 200 consulta, 201 criação, 204 alteração/exclusão, 400 dados inválidos, 404 registro ausente e 409 conflito de estoque ou relacionamento. Cada gravação trata `DbUpdateException` no próprio controller e registra o detalhe técnico no log.
 
 ## Validação
 
@@ -155,4 +187,4 @@ O arquivo tests/fixtures/banco_teste.sql prepara esse esquema isolado com o nome
 
 O teste cobre cadastro/atualização completa de funcionário, múltiplos endereços, CPF duplicado, produtos/serviços, entradas, preços, troca do produto da entrada, atendimento N:N, itens individuais, PUT repetido, rollback, estorno de entrada já consumida e duas vendas simultâneas.
 
-Validação desta implementação: compilação sem erros ou avisos e 90 requisições HTTP verificadas contra MariaDB 10.11 com as três triggers de INSERT do SQL original.
+Validação desta versão: `dotnet build` sem erros ou avisos e 110 requisições HTTP verificadas contra MariaDB 10.11, com a função e as três triggers de INSERT originais. Os testes também exercitam as validações numéricas com a cultura pt-BR.

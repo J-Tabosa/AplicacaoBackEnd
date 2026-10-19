@@ -1,20 +1,13 @@
 using AplicacaoBackEnd.Models;
 using Microsoft.EntityFrameworkCore;
-using AplicacaoBackEnd.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-
-builder.Services.AddControllers(options => options.Filters.Add<ApiExceptionFilter>());
-builder.Services.AddScoped<PessoaService>();
-builder.Services.AddScoped<EstoqueService>();
-builder.Services.AddScoped<AtendimentoService>();
-builder.Services.AddScoped<ItemService>();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// O controller recebe este contexto para consultar e gravar no banco.
 builder.Services.AddDbContext<DbAtendimentoContext>(options =>
     options.UseMySql(
         builder.Configuration.GetConnectionString("connection"),
@@ -25,7 +18,6 @@ builder.Services.AddDbContext<DbAtendimentoContext>(options =>
 var app = builder.Build();
 app.UseCors(o => o.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -33,9 +25,6 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
 app.UseAuthorization();
-
 app.MapControllers();
-
 app.Run();
