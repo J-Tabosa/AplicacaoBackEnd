@@ -12,11 +12,13 @@ public class EntradaProdutoController : ControllerBase
 {
     private readonly DbAtendimentoContext _context;
     private readonly ILogger<EntradaProdutoController> _logger;
+    private readonly IWebHostEnvironment _ambiente;
 
-    public EntradaProdutoController(DbAtendimentoContext context, ILogger<EntradaProdutoController> logger)
+    public EntradaProdutoController(DbAtendimentoContext context, ILogger<EntradaProdutoController> logger, IWebHostEnvironment ambiente)
     {
         _context = context;
         _logger = logger;
+        _ambiente = ambiente;
     }
 
     [HttpGet("all")]
@@ -115,6 +117,16 @@ public class EntradaProdutoController : ControllerBase
         {
             await transacao.RollbackAsync();
             _logger.LogError(ex, "Erro ao gravar os dados no banco.");
+
+            if (_ambiente.IsDevelopment())
+            {
+                return Conflict(new
+                {
+                    mensagem = "Não foi possível registrar a entrada de produto.",
+                    detalhe = ex.GetBaseException().Message
+                });
+            }
+
             return Conflict(new { mensagem = "Não foi possível gravar. Confira os vínculos e se os dados já foram cadastrados." });
         }
     }
