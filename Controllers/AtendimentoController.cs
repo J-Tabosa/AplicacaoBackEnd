@@ -26,7 +26,7 @@ public class AtendimentoController : ControllerBase
             .OrderBy(a => a.Idatendimento)
             .ToListAsync();
 
-        var resposta = new List<AtendimentoRespostaDTO>();
+        var resposta = new List<object>();
         foreach (var atendimento in atendimentos)
         {
             resposta.Add(ExibirAtendimento(atendimento));
@@ -502,65 +502,62 @@ public class AtendimentoController : ControllerBase
         return estoques;
     }
 
-    private AtendimentoRespostaDTO ExibirAtendimento(Atendimento atendimento)
+    private object ExibirAtendimento(Atendimento atendimento)
     {
-        var resposta = new AtendimentoRespostaDTO
-        {
-            IdAtendimento = atendimento.Idatendimento,
-            IdPessoa = atendimento.Idpessoa,
-            Cliente = atendimento.IdpessoaNavigation.Nome,
-            Pessoa = ExibirPessoa(atendimento.IdpessoaNavigation),
-            DataAtendimento = atendimento.DataAtendimento,
-            StatusAtendimento = atendimento.StatusAtendimento
-        };
+        var itens = new List<object>();
+        decimal valorTotal = 0;
 
         foreach (var item in atendimento.Atendimentoitems.OrderBy(i => i.Iditem))
         {
             var subtotal = item.QuantidadeItem * (item.ValorunitarioEntrada ?? 0);
-            resposta.Itens.Add(new AtendimentoItemRespostaDTO
+            itens.Add(new
             {
                 IdItem = item.Iditem,
                 Item = item.IditemNavigation.Item1,
                 TipoItem = item.IditemNavigation.TipoItem,
                 IdFuncionario = item.Idfuncionario,
                 Funcionario = item.IdfuncionarioNavigation.IdpessoaNavigation.Nome,
-                QuantidadeItem = item.QuantidadeItem,
+                item.QuantidadeItem,
                 ValorUnitarioEntrada = item.ValorunitarioEntrada,
                 Subtotal = subtotal
             });
 
-            resposta.ValorTotal += subtotal;
+            valorTotal += subtotal;
         }
 
-        return resposta;
+        return new
+        {
+            IdAtendimento = atendimento.Idatendimento,
+            IdPessoa = atendimento.Idpessoa,
+            Cliente = atendimento.IdpessoaNavigation.Nome,
+            Pessoa = ExibirPessoa(atendimento.IdpessoaNavigation),
+            atendimento.DataAtendimento,
+            atendimento.StatusAtendimento,
+            Itens = itens,
+            ValorTotal = valorTotal
+        };
     }
 
     // Monta o JSON de saída sem devolver os relacionamentos circulares do EF.
-    private PessoaRespostaDTO ExibirPessoa(Pessoa pessoa)
+    private object ExibirPessoa(Pessoa pessoa)
     {
-        var resposta = new PessoaRespostaDTO
+        return new
         {
-            Idpessoa = pessoa.Idpessoa,
-            Nome = pessoa.Nome,
-            Cpf = pessoa.Cpf,
-            DataNascimento = pessoa.DataNascimento,
-            Sexo = pessoa.Sexo,
-            Email = pessoa.Email,
-            Telefone = pessoa.Telefone,
-            AtivoPessoa = pessoa.AtivoPessoa
-        };
-
-        foreach (var endereco in pessoa.Enderecos.OrderBy(e => e.Idendereco))
-        {
-            resposta.Enderecos.Add(new EnderecoRespostaDTO
+            pessoa.Idpessoa,
+            pessoa.Nome,
+            pessoa.Cpf,
+            pessoa.DataNascimento,
+            pessoa.Sexo,
+            pessoa.Email,
+            pessoa.Telefone,
+            pessoa.AtivoPessoa,
+            Enderecos = pessoa.Enderecos.OrderBy(e => e.Idendereco).Select(e => new
             {
-                Idendereco = endereco.Idendereco,
-                Cep = endereco.Cep,
-                Numero = endereco.Numero,
-                Complemento = endereco.Complemento
-            });
-        }
-
-        return resposta;
+                e.Idendereco,
+                e.Cep,
+                e.Numero,
+                e.Complemento
+            }).ToList()
+        };
     }
 }

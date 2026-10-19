@@ -1,6 +1,6 @@
 # Aplicação BackEnd — Atividade 03
 
-API ASP.NET Core 8 com Entity Framework Core e Pomelo, organizada com DTOs de entrada e saída. Os três desafios da atividade estão implementados: funcionários/pessoas/endereços, entradas de produtos/estoque e atendimentos com produtos e serviços.
+API ASP.NET Core 8 com Entity Framework Core e Pomelo, com DTOs para receber os dados e respostas montadas nos controllers. Os três desafios da atividade estão implementados: funcionários/pessoas/endereços, entradas de produtos/estoque e atendimentos com produtos e serviços.
 
 ## Preparação
 
@@ -137,12 +137,14 @@ As rotas, consultas, validações e gravações ficam nos próprios controllers.
 - `Models`: classes que representam as tabelas, geradas a partir do banco.
 - `DTO`: classes com os campos do JSON. Cada classe fica em um arquivo com o mesmo nome.
 - DTOs como `FuncionarioCadastroDTO` recebem os dados enviados no POST/PUT.
-- DTOs terminados em `RespostaDTO` definem os campos que a API devolve no GET/POST. `ProdutoDadosDTO` recebe a parte `produto` do item e `ProdutoResumoDTO` devolve essa parte com o saldo.
+- Os controllers montam as respostas com `new { ... }`, escolhendo os campos devolvidos no JSON. Não há DTOs exclusivos de resposta. `ProdutoDadosDTO` recebe a parte `produto` do item.
 - `Controllers`: recebem a requisição, conferem os dados, usam `_context` para acessar o banco e devolvem a resposta HTTP.
+
+O `CategoriumsController` e o `CategoriaDTO` têm comentários explicando cada parte do CRUD e das validações.
 
 Para acompanhar um cadastro de funcionário, abra `FuncionarioController.cs` e procure `PostFuncionario`. Ele confere os dados, monta a pessoa com seus endereços, salva para obter o ID, cria o funcionário com esse ID e confirma a transação. `PutFuncionario` atualiza essas três partes no mesmo método.
 
-Métodos privados como `ExibirFuncionario` apenas montam o DTO de saída. No `AtendimentoController`, `AtualizarItens` concentra a regra repetida nas rotas do atendimento e dos itens. Ele também fica no controller: retorna uma resposta de erro quando há problema e `null` quando a atualização deu certo. Isso evita escrever a mesma movimentação de estoque em cada rota.
+Métodos privados como `ExibirFuncionario` apenas montam o objeto devolvido no JSON. No `AtendimentoController`, `AtualizarItens` concentra a regra repetida nas rotas do atendimento e dos itens. Ele também fica no controller: retorna uma resposta de erro quando há problema e `null` quando a atualização deu certo. Isso evita escrever a mesma movimentação de estoque em cada rota.
 
 O nome `builder.Services` em `Program.cs` pertence à configuração do ASP.NET. Ele registra o contexto do banco e os recursos da API; não representa uma camada de services criada no projeto.
 

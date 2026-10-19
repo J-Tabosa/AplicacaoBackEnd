@@ -30,7 +30,7 @@ public class ItemsController : ControllerBase
             .OrderBy(i => i.Iditem)
             .ToListAsync();
 
-        var resposta = new List<ItemRespostaDTO>();
+        var resposta = new List<object>();
         foreach (var item in itens)
         {
             resposta.Add(ExibirItem(item));
@@ -256,31 +256,31 @@ public class ItemsController : ControllerBase
         }
     }
 
-    private ItemRespostaDTO ExibirItem(Item item)
+    private object ExibirItem(Item item)
     {
-        var resposta = new ItemRespostaDTO
-        {
-            IdItem = item.Iditem,
-            IdCategoria = item.Idcategoria,
-            Item = item.Item1,
-            DescricaoItem = item.DescricaoItem,
-            Preco = item.Preco,
-            TipoItem = item.TipoItem,
-            AtivoProdutoServico = item.AtivoProdutoServico
-        };
-
-        resposta.Categoria = item.IdcategoriaNavigation.Categoria;
+        object? produto = null;
         if (item.Produto != null)
         {
-            resposta.Produto = new ProdutoResumoDTO
+            produto = new
             {
-                CodigoPreco = item.Produto.CodigoPreco,
-                PrecoVenda = item.Produto.PrecoVenda,
-                Unidade = item.Produto.Unidade,
+                item.Produto.CodigoPreco,
+                item.Produto.PrecoVenda,
+                item.Produto.Unidade,
                 QuantidadeEstoque = item.Produto.Estoque?.QuantidadeEstoque
             };
         }
 
-        return resposta;
+        return new
+        {
+            IdItem = item.Iditem,
+            IdCategoria = item.Idcategoria,
+            Categoria = item.IdcategoriaNavigation.Categoria,
+            Item = item.Item1,
+            item.DescricaoItem,
+            item.Preco,
+            item.TipoItem,
+            item.AtivoProdutoServico,
+            Produto = produto
+        };
     }
 }

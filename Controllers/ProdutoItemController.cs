@@ -30,7 +30,7 @@ public class ProdutoItemController : ControllerBase
             .OrderBy(i => i.Iditem)
             .ToListAsync();
 
-        var resposta = new List<ProdutoRespostaDTO>();
+        var resposta = new List<object>();
         foreach (var item in itens)
         {
             resposta.Add(ExibirProduto(item));
@@ -241,26 +241,20 @@ public class ProdutoItemController : ControllerBase
         }
     }
 
-    private ProdutoRespostaDTO ExibirProduto(Item item)
+    private object ExibirProduto(Item item)
     {
-        var resposta = new ProdutoRespostaDTO
+        return new
         {
             IdItem = item.Iditem,
             IdCategoria = item.Idcategoria,
             Item = item.Item1,
-            DescricaoItem = item.DescricaoItem,
-            Preco = item.Preco,
-            TipoItem = item.TipoItem,
-            AtivoProdutoServico = item.AtivoProdutoServico
+            item.DescricaoItem,
+            item.Preco,
+            item.TipoItem,
+            item.AtivoProdutoServico,
+            CodigoPreco = item.Produto?.CodigoPreco,
+            PrecoVenda = item.Produto?.PrecoVenda,
+            Unidade = item.Produto?.Unidade
         };
-
-        if (item.Produto != null)
-        {
-            resposta.CodigoPreco = item.Produto.CodigoPreco;
-            resposta.PrecoVenda = item.Produto.PrecoVenda;
-            resposta.Unidade = item.Produto.Unidade;
-        }
-
-        return resposta;
     }
 }

@@ -30,7 +30,7 @@ public class FuncionarioController : ControllerBase
             .OrderBy(r => r.Idpessoa)
             .ToListAsync();
 
-        var resposta = new List<FuncionarioRespostaDTO>();
+        var resposta = new List<object>();
         foreach (var registro in registros)
         {
             resposta.Add(ExibirFuncionario(registro));
@@ -299,35 +299,29 @@ public class FuncionarioController : ControllerBase
     }
 
     // Monta o JSON de saída sem devolver os relacionamentos circulares do EF.
-    private FuncionarioRespostaDTO ExibirFuncionario(Funcionario funcionario)
+    private object ExibirFuncionario(Funcionario funcionario)
     {
         var pessoa = funcionario.IdpessoaNavigation;
 
-        var resposta = new FuncionarioRespostaDTO
+        return new
         {
-            Idpessoa = pessoa.Idpessoa,
-            Nome = pessoa.Nome,
-            Cpf = pessoa.Cpf,
-            DataNascimento = pessoa.DataNascimento,
-            Sexo = pessoa.Sexo,
-            Email = pessoa.Email,
-            Telefone = pessoa.Telefone,
-            AtivoPessoa = pessoa.AtivoPessoa,
+            pessoa.Idpessoa,
+            pessoa.Nome,
+            pessoa.Cpf,
+            pessoa.DataNascimento,
+            pessoa.Sexo,
+            pessoa.Email,
+            pessoa.Telefone,
+            pessoa.AtivoPessoa,
             Cargo = funcionario.Cargo,
-            DataAdmissao = funcionario.DataAdmissao
-        };
-
-        foreach (var endereco in pessoa.Enderecos.OrderBy(e => e.Idendereco))
-        {
-            resposta.Enderecos.Add(new EnderecoRespostaDTO
+            DataAdmissao = funcionario.DataAdmissao,
+            Enderecos = pessoa.Enderecos.OrderBy(e => e.Idendereco).Select(e => new
             {
-                Idendereco = endereco.Idendereco,
-                Cep = endereco.Cep,
-                Numero = endereco.Numero,
-                Complemento = endereco.Complemento
-            });
-        }
-
-        return resposta;
+                e.Idendereco,
+                e.Cep,
+                e.Numero,
+                e.Complemento
+            }).ToList()
+        };
     }
 }

@@ -29,7 +29,7 @@ public class EntradaProdutoController : ControllerBase
             .OrderBy(e => e.IdentradaProduto)
             .ToListAsync();
 
-        var resposta = new List<EntradaProdutoRespostaDTO>();
+        var resposta = new List<object>();
         foreach (var entrada in entradas)
         {
             resposta.Add(ExibirEntrada(entrada));
@@ -320,17 +320,17 @@ public class EntradaProdutoController : ControllerBase
         return true;
     }
 
-    private EntradaProdutoRespostaDTO ExibirEntrada(EntradaProduto entrada)
+    private object ExibirEntrada(EntradaProduto entrada)
     {
-        return new EntradaProdutoRespostaDTO
+        return new
         {
             IdEntradaProduto = entrada.IdentradaProduto,
             IdItem = entrada.Iditem,
             Produto = entrada.IditemNavigation.IditemNavigation.Item1,
-            DataEntradaProduto = entrada.DataEntradaProduto,
-            QuantidadeEntrada = entrada.QuantidadeEntrada,
-            Unidade = entrada.Unidade,
-            ValorUnitarioEntrada = entrada.ValorUnitarioEntrada,
+            entrada.DataEntradaProduto,
+            entrada.QuantidadeEntrada,
+            entrada.Unidade,
+            entrada.ValorUnitarioEntrada,
             QuantidadeEstoque = entrada.IditemNavigation.Estoque?.QuantidadeEstoque ?? 0,
             PrecoVenda = entrada.IditemNavigation.PrecoVenda
         };
