@@ -1,0 +1,249 @@
+<div class="titulo-pagina">
+  <div>
+    <span class="etiqueta">Cadastros</span>
+    <h1>{{ funcionario ? 'Funcionários' : 'Pessoas' }}</h1>
+    <p class="subtitulo">
+      {{
+        funcionario
+          ? 'Dados pessoais, profissionais e endereços da equipe.'
+          : 'Cadastre clientes e gerencie seus endereços.'
+      }}
+    </p>
+  </div>
+  <button (click)="nova()" [disabled]="salvando()">
+    {{ funcionario ? 'Novo funcionário' : 'Nova pessoa' }}
+  </button>
+</div>
+@if (erro()) {
+  <div class="mensagem erro" role="alert">{{ erro() }}</div>
+}
+@if (sucesso()) {
+  <div class="mensagem sucesso" role="status">{{ sucesso() }}</div>
+}
+@if (mostrarFormulario) {
+  <section class="painel">
+    <h2>{{ dados.idpessoa ? 'Editar cadastro' : 'Novo cadastro' }}</h2>
+    <form #form="ngForm" (ngSubmit)="salvar()">
+      <fieldset [disabled]="salvando()">
+        <div class="grade-form">
+          <div class="campo">
+            <label for="nome">Nome completo *</label
+            ><input id="nome" name="nome" [(ngModel)]="dados.nome" required maxlength="100" />
+          </div>
+          <div class="campo">
+            <label for="cpf">CPF *</label
+            ><input
+              id="cpf"
+              name="cpf"
+              [(ngModel)]="cpf"
+              required
+              pattern="[0-9]{11}"
+              maxlength="11"
+              inputmode="numeric"
+              placeholder="Somente os 11 dígitos"
+            />
+          </div>
+          <div class="campo">
+            <label for="nascimento">Data de nascimento *</label
+            ><input
+              type="date"
+              id="nascimento"
+              name="nascimento"
+              [(ngModel)]="dados.dataNascimento"
+              required
+              min="1000-01-01"
+            />
+          </div>
+          <div class="campo">
+            <label for="sexo">Sexo</label
+            ><select id="sexo" name="sexo" [(ngModel)]="dados.sexo">
+              <option value="N">Não informado</option>
+              <option value="M">Masculino</option>
+              <option value="F">Feminino</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label for="email">E-mail</label
+            ><input
+              type="email"
+              id="email"
+              name="email"
+              [(ngModel)]="dados.email"
+              email
+              maxlength="100"
+            />
+          </div>
+          <div class="campo">
+            <label for="telefone">Telefone</label
+            ><input
+              type="tel"
+              id="telefone"
+              name="telefone"
+              [(ngModel)]="telefone"
+              pattern="[0-9]{8,13}"
+              maxlength="13"
+              placeholder="DDD e número, sem pontuação"
+            />
+          </div>
+          <div class="campo">
+            <label for="ativo">Situação *</label
+            ><select id="ativo" name="ativo" [(ngModel)]="dados.ativoPessoa" required>
+              <option value="S">Ativa</option>
+              <option value="N">Inativa</option>
+            </select>
+          </div>
+          @if (funcionario) {
+            <div class="campo">
+              <label for="cargo">Cargo *</label
+              ><input id="cargo" name="cargo" [(ngModel)]="cargo" required maxlength="20" />
+            </div>
+            <div class="campo">
+              <label for="admissao">Data de admissão *</label
+              ><input
+                type="date"
+                id="admissao"
+                name="admissao"
+                [(ngModel)]="dataAdmissao"
+                required
+                min="1000-01-01"
+              />
+            </div>
+          }
+        </div>
+        <div class="secao-form">
+          <h2>Endereços</h2>
+          <p class="ajuda">
+            Mantenha pelo menos um endereço. Os endereços removidos aqui serão excluídos ao salvar.
+          </p>
+          @for (endereco of dados.enderecos; track $index; let i = $index) {
+            <div class="endereco">
+              <div class="acoes">
+                <h3>Endereço {{ i + 1 }}</h3>
+                <button
+                  type="button"
+                  class="pequeno perigo"
+                  (click)="removerEndereco(i)"
+                  [disabled]="dados.enderecos.length === 1"
+                >
+                  Remover endereço
+                </button>
+              </div>
+              <div class="grade-form">
+                <div class="campo">
+                  <label [for]="'cep' + i">CEP *</label
+                  ><input
+                    [id]="'cep' + i"
+                    [name]="'cep' + i"
+                    [(ngModel)]="endereco.cep"
+                    required
+                    pattern="[0-9]{8}"
+                    maxlength="8"
+                    inputmode="numeric"
+                    placeholder="8 dígitos, sem hífen"
+                  />
+                </div>
+                <div class="campo">
+                  <label [for]="'numero' + i">Número</label
+                  ><input
+                    [id]="'numero' + i"
+                    [name]="'numero' + i"
+                    [(ngModel)]="endereco.numero"
+                    maxlength="10"
+                  />
+                </div>
+                <div class="campo inteiro">
+                  <label [for]="'complemento' + i">Complemento</label
+                  ><input
+                    [id]="'complemento' + i"
+                    [name]="'complemento' + i"
+                    [(ngModel)]="endereco.complemento"
+                    maxlength="150"
+                  />
+                </div>
+              </div>
+            </div>
+          }
+          <button
+            type="button"
+            class="secundario"
+            style="margin-top: 14px"
+            (click)="adicionarEndereco()"
+          >
+            Adicionar endereço
+          </button>
+        </div>
+        <div class="acoes acoes-form">
+          <button type="submit" [disabled]="form.invalid || salvando()">
+            {{ salvando() ? 'Salvando…' : 'Salvar cadastro' }}</button
+          ><button type="button" class="secundario" (click)="mostrarFormulario = false">
+            Cancelar
+          </button>
+        </div>
+      </fieldset>
+    </form>
+  </section>
+}
+<section class="painel">
+  <h2>{{ funcionario ? 'Equipe cadastrada' : 'Pessoas cadastradas' }}</h2>
+  @if (carregando()) {
+    <p class="carregando">Carregando cadastros…</p>
+  } @else if (lista().length === 0) {
+    <div class="vazio">
+      <strong>Nenhum cadastro encontrado.</strong>Use o botão acima para cadastrar.
+    </div>
+  } @else {
+    <div class="tabela-responsiva">
+      <table>
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>CPF</th>
+            @if (funcionario) {
+              <th>Cargo</th>
+            }
+            <th>Contato</th>
+            <th>Endereços</th>
+            <th>Situação</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (pessoa of lista(); track pessoa.idpessoa) {
+            <tr>
+              <td>
+                <strong>{{ pessoa.nome }}</strong
+                ><br /><small class="ajuda">{{
+                  pessoa.dataNascimento | date: 'dd/MM/yyyy' : 'UTC'
+                }}</small>
+              </td>
+              <td>{{ pessoa.cpf.toString().padStart(11, '0') }}</td>
+              @if (funcionario) {
+                <td>{{ cargoDe(pessoa) }}</td>
+              }
+              <td>{{ pessoa.email || pessoa.telefone || '—' }}</td>
+              <td>{{ pessoa.enderecos.length }}</td>
+              <td>
+                <span class="selo" [class.inativo]="pessoa.ativoPessoa !== 'S'">{{
+                  pessoa.ativoPessoa === 'S' ? 'Ativa' : 'Inativa'
+                }}</span>
+              </td>
+              <td>
+                <div class="acoes">
+                  <button
+                    class="pequeno secundario"
+                    (click)="editar(pessoa)"
+                    [disabled]="salvando()"
+                  >
+                    Editar</button
+                  ><button class="pequeno perigo" (click)="remover(pessoa)" [disabled]="salvando()">
+                    Excluir
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>

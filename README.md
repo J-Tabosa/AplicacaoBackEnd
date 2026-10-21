@@ -1,6 +1,145 @@
-# Aplicação BackEnd — Atividade 03
+# Aplicação BackEnd + Angular — Atividade 03
 
 API ASP.NET Core 8 com Entity Framework Core e Pomelo, com DTOs para receber os dados e respostas montadas nos controllers. Os três desafios da atividade estão implementados: funcionários/pessoas/endereços, entradas de produtos/estoque e atendimentos com produtos e serviços.
+
+## Executar o sistema completo no Windows
+
+O backend C# continua na raiz (`Controllers`, `DTO`, `Models`, `Program.cs`). O Angular foi acrescentado somente na pasta `frontend`. São dois processos em desenvolvimento: a API na porta 7067 e a interface na porta 4200.
+
+### 1. Instalações necessárias, uma única vez
+
+Use **Node.js 24 LTS, versão 24.15 ou superior**, e **.NET 8 SDK**. O npm já acompanha o Node.js. O Angular CLI é uma dependência local deste projeto, instalada pelo `npm ci`: não precisa instalar Angular globalmente.
+
+Se ainda não tiver essas ferramentas, instale pelo PowerShell com o WinGet:
+
+```powershell
+winget install --exact --id OpenJS.NodeJS.LTS
+winget install --exact --id Microsoft.DotNet.SDK.8
+```
+
+Feche e abra novamente o terminal após instalar. Confira:
+
+```powershell
+node --version
+npm --version
+dotnet --version
+```
+
+Também estão disponíveis os instaladores oficiais: [Node.js](https://nodejs.org/en/download) e [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0).
+
+### 2. Atualize o projeto e confira o banco
+
+Dentro da pasta do seu clone de `AplicacaoBackEnd`, pare a API antes de atualizar:
+
+```powershell
+git pull
+```
+
+Quem ainda não clonou pode usar:
+
+```powershell
+git clone https://github.com/J-Tabosa/AplicacaoBackEnd.git
+cd AplicacaoBackEnd
+```
+
+Inicie o seu MySQL/MariaDB e use o **db_atendimento** que já possui. Confira servidor, porta, usuário e senha em `appsettings.json`. A conexão atual usa `localhost:3312`; se o seu banco estiver em outra porta, ajuste esse arquivo. A aplicação não recria o banco.
+
+O banco precisa conter as três triggers originais e a função `fn_calcular_preco_venda`. Uma falha nelas também aparece ao cadastrar pelo Angular: mudar de interface não corrige uma função ausente no banco.
+
+### 3. Terminal 1: iniciar a API
+
+Na raiz do repositório:
+
+```powershell
+dotnet restore
+dotnet dev-certs https --trust
+dotnet run --launch-profile https
+```
+
+Aceite a confiança no certificado de desenvolvimento quando o Windows perguntar. Deixe esse terminal aberto. O Swagger fica em **https://localhost:7067/swagger**.
+
+### 4. Terminal 2: iniciar o Angular
+
+Abra outro terminal na mesma raiz do repositório:
+
+```powershell
+cd frontend
+npm ci
+npm start
+```
+
+Abra **http://localhost:4200** no navegador. Deixe esse terminal aberto também. Nos próximos dias, basta iniciar o banco e repetir os dois comandos de execução: `dotnet run --launch-profile https` na raiz e `npm start` em `frontend`. Rode `npm ci` novamente quando o `package-lock.json` mudar.
+
+### Como o Angular acessa a API
+
+`frontend/src/app/services/api.config.ts` define o prefixo `/api`. Durante `npm start`, `frontend/proxy.conf.cjs` encaminha essas chamadas para `https://localhost:7067`. O navegador usa somente a porta 4200 para a interface e suas requisições.
+
+Se você mudar a porta da API, altere o destino em `proxy.conf.cjs` e reinicie o Angular. Para usar temporariamente uma API HTTP em outra porta no PowerShell:
+
+```powershell
+$env:API_TARGET = "http://localhost:5290"
+npm start
+```
+
+O destino padrão é HTTPS 7067. `secure: false` no proxy permite que o servidor de desenvolvimento do Angular converse com o certificado local do ASP.NET.
+
+### Telas disponíveis
+
+- **Pessoas:** cadastro, edição, exclusão e vários endereços, preservando o ID dos endereços existentes.
+- **Funcionários:** cadastro e edição da pessoa, dos endereços e dos dados profissionais na mesma operação.
+- **Categorias:** cadastro, edição e exclusão, com os conflitos de vínculo informados pela API.
+- **Produtos e serviços:** categoria, preço, situação e dados específicos de produto; também mostra o saldo atual.
+- **Entradas:** recebimento, alteração e estorno de produtos; atualiza o saldo e os preços pela API.
+- **Atendimentos:** cliente, data, itens, quantidades, preço praticado e funcionário por item; detalhes com total e endereços do cliente.
+
+Para experimentar, cadastre uma pessoa e um funcionário, uma categoria, um produto e um serviço. Depois registre uma entrada para o produto e crie um atendimento. Os produtos precisam de saldo; os serviços não movimentam estoque.
+
+### Como ler o frontend
+
+- `src/app/models`: campos que vêm da API ou serão enviados para ela. Os nomes acompanham o JSON existente, incluindo `idpessoa`, `dataNascimento` e `enderecos`.
+- `src/app/services`: métodos HTTP de cada cadastro. `listar` usa GET, `adicionar` usa POST, `alterar` usa PUT e `remover` usa DELETE. Os PUTs e DELETEs recebem respostas sem corpo (`void`).
+- `src/app/components`: lógica da tela em `.ts` e formulário/tabela em `.html`. Pessoas e funcionários usam o mesmo componente; a configuração da rota indica qual cadastro será exibido.
+- `src/app/app.routes.ts`: caminhos do menu e seus componentes.
+- `src/styles.css`: estilos compartilhados, adaptados para computador e celular.
+
+Os formulários usam `ngModel`, como o Angular usado de base. `signal` atualiza listas e mensagens depois das consultas. `structuredClone` copia os dados ao editar para que a tabela só mude após salvar. `subscribe` trata tanto o sucesso quanto as mensagens de erro. Datas são enviadas como `AAAA-MM-DD`, preços como números e CEP como texto, preservando os zeros iniciais.
+
+Base utilizada: [AngularFinal](https://github.com/joaovsouza318-gif/AngularFinal). As telas de atletas/corridas/inscrições foram adaptadas para o domínio desta API. Não há chamadas ao MockAPI nem à antiga API da porta 8000.
+
+### Compilar e testar
+
+Na raiz, compile o backend:
+
+```powershell
+dotnet build
+```
+
+Em `frontend`, compile a interface:
+
+```powershell
+npm run build
+```
+
+A saída Angular fica em `frontend/dist/atendimento/browser`. `npm start` usa o servidor de desenvolvimento; publicar a interface em um servidor exige configurar o encaminhamento de `/api` para a API e o retorno de `index.html` nas rotas Angular.
+
+Os testes de integração devem usar uma instância da API conectada ao banco de teste `atividade_backend_test`, preparado pelo arquivo `tests/fixtures/banco_teste.sql`. Execute os testes Python já existentes com a API de teste em execução:
+
+```powershell
+python tests/integracao_api.py --base-url http://127.0.0.1:5089
+```
+
+Para os testes no navegador, instale o Chromium uma vez e indique o endereço dessa API de teste. O Playwright inicia o Angular automaticamente na porta 4200; feche outra instância do Angular antes de testar um destino diferente:
+
+```powershell
+cd frontend
+npx playwright install chromium
+$env:API_TARGET = "http://127.0.0.1:5089"
+npm test
+```
+
+O fluxo no navegador cria registros fictícios identificados por um código próprio e os remove ao terminar. Cobre todos os cadastros, múltiplos endereços, preço calculado, atendimento com produto e serviço, PUT repetido, estorno, mensagens de conflito, tela pequena e API indisponível.
+
+Validação da integração: backend e Angular compilados sem erros; 110 requisições HTTP aprovadas e 3 cenários no Chromium aprovados com a API em HTTP e em HTTPS, usando um banco MariaDB isolado. A compilação Angular também verifica os tipos nos templates.
 
 ## Preparação
 

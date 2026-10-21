@@ -1,0 +1,58 @@
+<section class="boas-vindas">
+  <p>SEU DIA A DIA, ORGANIZADO</p>
+  <h1>Bem-vindo ao Atendimento</h1>
+  <p>
+    Acompanhe seus cadastros, registre entradas de produtos e gerencie os atendimentos de clientes.
+  </p>
+</section>
+@if (erro()) {
+  <div class="mensagem erro" role="alert">{{ erro() }}</div>
+  <button (click)="carregar()">Tentar novamente</button>
+}
+@if (carregando()) {
+  <p class="carregando" role="status">Carregando o resumo…</p>
+} @else if (!erro()) {
+  <section class="resumo" aria-label="Resumo dos cadastros">
+    <a class="cartao" routerLink="/pessoas"
+      ><span>Pessoas</span><strong>{{ totais().pessoas }}</strong
+      ><span>Ver cadastros →</span></a
+    >
+    <a class="cartao" routerLink="/funcionarios"
+      ><span>Funcionários</span><strong>{{ totais().funcionarios }}</strong
+      ><span>Ver equipe →</span></a
+    >
+    <a class="cartao" routerLink="/categorias"
+      ><span>Categorias</span><strong>{{ totais().categorias }}</strong
+      ><span>Organizar itens →</span></a
+    >
+    <a class="cartao" routerLink="/itens"
+      ><span>Produtos e serviços</span><strong>{{ totais().itens }}</strong
+      ><span>Ver catálogo →</span></a
+    >
+    <a class="cartao" routerLink="/entradas"
+      ><span>Entradas</span><strong>{{ totais().entradas }}</strong
+      ><span>Gerenciar estoque →</span></a
+    >
+    <a class="cartao" routerLink="/atendimentos"
+      ><span>Atendimentos</span><strong>{{ totais().atendimentos }}</strong
+      ><span>Ver atendimentos →</span></a
+    >
+  </section>
+}
+<section class="painel" style="margin-top: 24px">
+  <h2>Por onde começar?</h2>
+  <div class="passos">
+    <div>
+      <strong>01 · Prepare os cadastros</strong>
+      <p>Cadastre pessoas e funcionários. Depois, crie as categorias e os produtos ou serviços.</p>
+    </div>
+    <div>
+      <strong>02 · Registre as entradas</strong>
+      <p>Informe as quantidades recebidas para disponibilizar os produtos no estoque.</p>
+    </div>
+    <div>
+      <strong>03 · Atenda seus clientes</strong>
+      <p>Selecione o cliente, os itens e os funcionários responsáveis por cada atendimento.</p>
+    </div>
+  </div>
+</section>

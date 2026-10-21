@@ -1,0 +1,291 @@
+<div class="titulo-pagina">
+  <div>
+    <span class="etiqueta">Operações</span>
+    <h1>Atendimentos</h1>
+    <p class="subtitulo">Clientes, produtos, serviços e equipe em cada atendimento.</p>
+  </div>
+  <button
+    (click)="novo()"
+    [disabled]="
+      salvando() ||
+      carregando() ||
+      pessoas().length === 0 ||
+      funcionarios().length === 0 ||
+      itens().length === 0
+    "
+  >
+    Novo atendimento
+  </button>
+</div>
+@if (erro()) {
+  <div class="mensagem erro" role="alert">{{ erro() }}</div>
+}
+@if (sucesso()) {
+  <div class="mensagem sucesso" role="status">{{ sucesso() }}</div>
+}
+@if (
+  !carregando() &&
+  !erro() &&
+  (pessoas().length === 0 || funcionarios().length === 0 || itens().length === 0)
+) {
+  <div class="mensagem">
+    Para registrar um atendimento, cadastre <a routerLink="/pessoas">pessoas</a>,
+    <a routerLink="/funcionarios">funcionários</a> e
+    <a routerLink="/itens">produtos ou serviços</a>.
+  </div>
+}
+@if (detalhes(); as atendimento) {
+  <section class="painel detalhes">
+    <div class="titulo-pagina">
+      <h2>Atendimento #{{ atendimento.idAtendimento }}</h2>
+      <button class="pequeno secundario" (click)="detalhes.set(null)">Fechar detalhes</button>
+    </div>
+    <p>
+      <strong>Cliente:</strong> {{ atendimento.cliente }} · <strong>CPF:</strong>
+      {{ atendimento.pessoa.cpf.toString().padStart(11, '0') }}
+    </p>
+    <p>
+      <strong>Data:</strong> {{ atendimento.dataAtendimento | date: 'dd/MM/yyyy' : 'UTC' }} ·
+      <strong>Situação:</strong>
+      {{ atendimento.statusAtendimento === 'F' ? 'Finalizado' : 'Aberto' }}
+    </p>
+    <p>
+      <strong>Contato:</strong>
+      {{ atendimento.pessoa.email || atendimento.pessoa.telefone || 'Não informado' }}
+    </p>
+    @for (endereco of atendimento.pessoa.enderecos; track endereco.idendereco) {
+      <p class="ajuda">
+        Endereço: CEP {{ endereco.cep }} · Nº {{ endereco.numero || 's/n' }}
+        {{ endereco.complemento }}
+      </p>
+    }
+    <div class="tabela-responsiva">
+      <table>
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Funcionário</th>
+            <th>Quantidade</th>
+            <th>Preço praticado</th>
+            <th>Subtotal</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of atendimento.itens; track item.idItem) {
+            <tr>
+              <td>
+                {{ item.item }}
+                <span class="selo">{{ item.tipoItem === 'P' ? 'Produto' : 'Serviço' }}</span>
+              </td>
+              <td>{{ item.funcionario }}</td>
+              <td>{{ item.quantidadeItem }}</td>
+              <td>{{ item.valorUnitarioEntrada | currency: 'BRL' }}</td>
+              <td>{{ item.subtotal | currency: 'BRL' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <div class="total">Total: {{ atendimento.valorTotal | currency: 'BRL' }}</div>
+  </section>
+}
+@if (mostrarFormulario) {
+  <section class="painel">
+    <h2>{{ dados.idAtendimento ? 'Editar atendimento' : 'Registrar atendimento' }}</h2>
+    <form #form="ngForm" (ngSubmit)="salvar()">
+      <fieldset [disabled]="salvando()">
+        <div class="grade-form">
+          <div class="campo">
+            <label for="cliente">Cliente *</label
+            ><select id="cliente" name="cliente" [(ngModel)]="dados.idPessoa" required>
+              <option [ngValue]="0" disabled>Selecione o cliente</option>
+              @for (pessoa of pessoas(); track pessoa.idpessoa) {
+                <option [ngValue]="pessoa.idpessoa">{{ pessoa.nome }}</option>
+              }
+            </select>
+          </div>
+          <div class="campo">
+            <label for="data">Data do atendimento *</label
+            ><input
+              type="date"
+              id="data"
+              name="data"
+              [(ngModel)]="dados.dataAtendimento"
+              required
+              min="1000-01-01"
+            />
+          </div>
+          <div class="campo">
+            <label for="situacao">Situação *</label
+            ><select id="situacao" name="situacao" [(ngModel)]="dados.statusAtendimento" required>
+              <option value="A">Aberto</option>
+              <option value="F">Finalizado</option>
+            </select>
+          </div>
+        </div>
+        <div class="secao-form">
+          <h2>Itens do atendimento</h2>
+          <p class="ajuda">
+            Cada item pode ter um funcionário e um preço praticado diferentes. Produtos precisam ter
+            saldo em estoque.
+          </p>
+          @for (item of dados.itens; track $index; let i = $index) {
+            <div class="linha-item">
+              <div class="campo">
+                <label [for]="'item' + i">Produto ou serviço *</label
+                ><select
+                  [id]="'item' + i"
+                  [name]="'item' + i"
+                  [(ngModel)]="item.idItem"
+                  (ngModelChange)="itemAlterado(item)"
+                  required
+                >
+                  <option [ngValue]="0" disabled>Selecione o item</option>
+                  @for (opcao of itens(); track opcao.idItem) {
+                    <option [ngValue]="opcao.idItem">
+                      {{ opcao.item }}
+                      {{
+                        opcao.produto
+                          ? ' · Saldo: ' + (opcao.produto.quantidadeEstoque ?? 0)
+                          : ' · Serviço'
+                      }}
+                    </option>
+                  }
+                </select>
+              </div>
+              <div class="campo">
+                <label [for]="'funcionario' + i">Funcionário *</label
+                ><select
+                  [id]="'funcionario' + i"
+                  [name]="'funcionario' + i"
+                  [(ngModel)]="item.idFuncionario"
+                  required
+                >
+                  <option [ngValue]="0" disabled>Selecione</option>
+                  @for (funcionario of funcionarios(); track funcionario.idpessoa) {
+                    <option [ngValue]="funcionario.idpessoa">{{ funcionario.nome }}</option>
+                  }
+                </select>
+              </div>
+              <div class="campo">
+                <label [for]="'qtd' + i">Quantidade *</label
+                ><input
+                  type="number"
+                  [id]="'qtd' + i"
+                  [name]="'qtd' + i"
+                  [(ngModel)]="item.quantidadeItem"
+                  min="1"
+                  max="2147483647"
+                  step="1"
+                  required
+                />
+              </div>
+              <div class="campo">
+                <label [for]="'preco' + i">Preço unitário *</label
+                ><input
+                  type="number"
+                  [id]="'preco' + i"
+                  [name]="'preco' + i"
+                  [(ngModel)]="item.valorUnitarioEntrada"
+                  min="0"
+                  max="99999999.99"
+                  step="0.01"
+                  required
+                />
+              </div>
+              <button
+                type="button"
+                class="perigo pequeno"
+                (click)="removerItem(i)"
+                [disabled]="dados.itens.length === 1"
+              >
+                Remover item
+              </button>
+            </div>
+          }
+          <button
+            type="button"
+            class="secundario"
+            style="margin-top: 16px"
+            (click)="adicionarItem()"
+          >
+            Adicionar item
+          </button>
+          <div class="total">Total: {{ calcularTotal() | currency: 'BRL' }}</div>
+        </div>
+        <div class="acoes acoes-form">
+          <button type="submit" [disabled]="form.invalid || !dados.idPessoa || salvando()">
+            {{ salvando() ? 'Salvando…' : 'Salvar atendimento' }}</button
+          ><button type="button" class="secundario" (click)="mostrarFormulario = false">
+            Cancelar
+          </button>
+        </div>
+      </fieldset>
+    </form>
+  </section>
+}
+<section class="painel">
+  <h2>Atendimentos registrados</h2>
+  @if (carregando()) {
+    <p class="carregando">Carregando atendimentos…</p>
+  } @else if (atendimentos().length === 0) {
+    <div class="vazio">
+      <strong>Nenhum atendimento registrado.</strong>Crie o primeiro atendimento para um cliente.
+    </div>
+  } @else {
+    <div class="tabela-responsiva">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Cliente</th>
+            <th>Data</th>
+            <th>Itens</th>
+            <th>Total</th>
+            <th>Situação</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (atendimento of atendimentos(); track atendimento.idAtendimento) {
+            <tr>
+              <td>#{{ atendimento.idAtendimento }}</td>
+              <td>{{ atendimento.cliente }}</td>
+              <td>{{ atendimento.dataAtendimento | date: 'dd/MM/yyyy' : 'UTC' }}</td>
+              <td>{{ atendimento.itens.length }}</td>
+              <td>{{ atendimento.valorTotal | currency: 'BRL' }}</td>
+              <td>
+                <span class="selo">{{
+                  atendimento.statusAtendimento === 'F' ? 'Finalizado' : 'Aberto'
+                }}</span>
+              </td>
+              <td>
+                <div class="acoes">
+                  <button
+                    class="pequeno secundario"
+                    (click)="verDetalhes(atendimento)"
+                    [disabled]="salvando()"
+                  >
+                    Detalhes</button
+                  ><button
+                    class="pequeno secundario"
+                    (click)="editar(atendimento)"
+                    [disabled]="salvando()"
+                  >
+                    Editar</button
+                  ><button
+                    class="pequeno perigo"
+                    (click)="remover(atendimento)"
+                    [disabled]="salvando()"
+                  >
+                    Excluir
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>

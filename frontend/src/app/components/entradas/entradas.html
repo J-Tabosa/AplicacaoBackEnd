@@ -1,0 +1,160 @@
+<div class="titulo-pagina">
+  <div>
+    <span class="etiqueta">Estoque</span>
+    <h1>Entradas de produtos</h1>
+    <p class="subtitulo">Registre os recebimentos e mantenha o estoque atualizado.</p>
+  </div>
+  <button (click)="nova()" [disabled]="salvando() || carregando() || produtos().length === 0">
+    Nova entrada
+  </button>
+</div>
+@if (erro()) {
+  <div class="mensagem erro" role="alert">{{ erro() }}</div>
+}
+@if (sucesso()) {
+  <div class="mensagem sucesso" role="status">{{ sucesso() }}</div>
+}
+@if (!carregando() && produtos().length === 0 && !erro()) {
+  <div class="mensagem">
+    <a routerLink="/itens">Cadastre um produto</a> antes de registrar uma entrada.
+  </div>
+}
+@if (mostrarFormulario) {
+  <section class="painel">
+    <h2>{{ dados.idEntradaProduto ? 'Editar entrada' : 'Registrar entrada' }}</h2>
+    <form #form="ngForm" (ngSubmit)="salvar()">
+      <fieldset [disabled]="salvando()">
+        <div class="grade-form">
+          <div class="campo">
+            <label for="produto">Produto *</label
+            ><select
+              id="produto"
+              name="produto"
+              [(ngModel)]="dados.idItem"
+              (ngModelChange)="produtoAlterado()"
+              required
+            >
+              <option [ngValue]="0" disabled>Selecione um produto</option>
+              @for (produto of produtos(); track produto.idItem) {
+                <option [ngValue]="produto.idItem">
+                  {{ produto.item }} · Saldo: {{ produto.produto?.quantidadeEstoque ?? 0 }}
+                </option>
+              }
+            </select>
+          </div>
+          <div class="campo">
+            <label for="data">Data da entrada *</label
+            ><input
+              type="date"
+              id="data"
+              name="data"
+              [(ngModel)]="dados.dataEntradaProduto"
+              required
+              min="1000-01-01"
+            />
+          </div>
+          <div class="campo">
+            <label for="quantidade">Quantidade *</label
+            ><input
+              type="number"
+              id="quantidade"
+              name="quantidade"
+              [(ngModel)]="dados.quantidadeEntrada"
+              required
+              min="1"
+              max="99999999"
+              step="1"
+            />
+          </div>
+          <div class="campo">
+            <label for="unidade">Unidade *</label
+            ><input
+              id="unidade"
+              name="unidade"
+              [(ngModel)]="dados.unidade"
+              required
+              maxlength="10"
+            />
+          </div>
+          <div class="campo">
+            <label for="valor">Custo unitário *</label
+            ><input
+              type="number"
+              id="valor"
+              name="valor"
+              [(ngModel)]="dados.valorUnitarioEntrada"
+              required
+              min="0"
+              max="99999999.99"
+              step="0.01"
+            />
+          </div>
+        </div>
+        <p class="ajuda">
+          Informe o custo de uma unidade. A entrada atualiza o saldo e recalcula o preço de venda do
+          produto.
+        </p>
+        <div class="acoes acoes-form">
+          <button type="submit" [disabled]="form.invalid || !dados.idItem || salvando()">
+            {{ salvando() ? 'Salvando…' : 'Salvar entrada' }}</button
+          ><button type="button" class="secundario" (click)="mostrarFormulario = false">
+            Cancelar
+          </button>
+        </div>
+      </fieldset>
+    </form>
+  </section>
+}
+<section class="painel">
+  <h2>Histórico de entradas</h2>
+  @if (carregando()) {
+    <p class="carregando">Carregando entradas…</p>
+  } @else if (entradas().length === 0) {
+    <div class="vazio">
+      <strong>Nenhuma entrada registrada.</strong>Registre um recebimento para abastecer o estoque.
+    </div>
+  } @else {
+    <div class="tabela-responsiva">
+      <table>
+        <thead>
+          <tr>
+            <th>Produto</th>
+            <th>Data</th>
+            <th>Quantidade recebida</th>
+            <th>Custo unitário</th>
+            <th>Saldo atual</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (entrada of entradas(); track entrada.idEntradaProduto) {
+            <tr>
+              <td>{{ entrada.produto }}</td>
+              <td>{{ entrada.dataEntradaProduto | date: 'dd/MM/yyyy' : 'UTC' }}</td>
+              <td>{{ entrada.quantidadeEntrada }} {{ entrada.unidade }}</td>
+              <td>{{ entrada.valorUnitarioEntrada | currency: 'BRL' }}</td>
+              <td>{{ entrada.quantidadeEstoque }}</td>
+              <td>
+                <div class="acoes">
+                  <button
+                    class="pequeno secundario"
+                    (click)="editar(entrada)"
+                    [disabled]="salvando()"
+                  >
+                    Editar</button
+                  ><button
+                    class="pequeno perigo"
+                    (click)="remover(entrada)"
+                    [disabled]="salvando()"
+                  >
+                    Excluir
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>

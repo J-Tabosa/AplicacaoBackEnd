@@ -1,0 +1,201 @@
+<div class="titulo-pagina">
+  <div>
+    <span class="etiqueta">Catálogo</span>
+    <h1>Produtos e serviços</h1>
+    <p class="subtitulo">Gerencie os itens oferecidos aos seus clientes e consulte o estoque.</p>
+  </div>
+  <button (click)="novo()" [disabled]="salvando() || carregando() || categorias().length === 0">
+    Novo item
+  </button>
+</div>
+@if (erro()) {
+  <div class="mensagem erro" role="alert">{{ erro() }}</div>
+}
+@if (sucesso()) {
+  <div class="mensagem sucesso" role="status">{{ sucesso() }}</div>
+}
+@if (!carregando() && categorias().length === 0 && !erro()) {
+  <div class="mensagem">
+    <a routerLink="/categorias">Cadastre uma categoria</a> antes de adicionar produtos e serviços.
+  </div>
+}
+@if (mostrarFormulario) {
+  <section class="painel">
+    <h2>{{ dados.idItem ? 'Editar item' : 'Cadastrar item' }}</h2>
+    <form #form="ngForm" (ngSubmit)="salvar()">
+      <fieldset [disabled]="salvando()">
+        <div class="grade-form">
+          <div class="campo">
+            <label for="item">Nome do item *</label
+            ><input id="item" name="item" [(ngModel)]="dados.item" required maxlength="40" />
+          </div>
+          <div class="campo">
+            <label for="categoria">Categoria *</label
+            ><select id="categoria" name="categoria" [(ngModel)]="dados.idCategoria" required>
+              <option [ngValue]="0" disabled>Selecione uma categoria</option>
+              @for (categoria of categorias(); track categoria.idcategoria) {
+                <option [ngValue]="categoria.idcategoria">{{ categoria.categoria }}</option>
+              }
+            </select>
+          </div>
+          <div class="campo">
+            <label for="tipo">Tipo *</label
+            ><select
+              id="tipo"
+              name="tipo"
+              [(ngModel)]="dados.tipoItem"
+              required
+              [disabled]="dados.idItem > 0"
+            >
+              <option value="S">Serviço</option>
+              <option value="P">Produto</option>
+            </select>
+            @if (dados.idItem) {
+              <small class="ajuda">O tipo é definido no cadastro.</small>
+            }
+          </div>
+          <div class="campo">
+            <label for="preco">{{
+              dados.tipoItem === 'P' ? 'Custo / preço base *' : 'Preço do serviço *'
+            }}</label
+            ><input
+              type="number"
+              id="preco"
+              name="preco"
+              [(ngModel)]="dados.preco"
+              required
+              min="0"
+              max="99999999.99"
+              step="0.01"
+            />
+          </div>
+          <div class="campo">
+            <label for="ativo">Situação *</label
+            ><select id="ativo" name="ativo" [(ngModel)]="dados.ativoProdutoServico" required>
+              <option value="S">Ativo</option>
+              <option value="N">Inativo</option>
+            </select>
+          </div>
+          <div class="campo inteiro">
+            <label for="descricao">Descrição</label
+            ><textarea
+              id="descricao"
+              name="descricao"
+              [(ngModel)]="dados.descricaoItem"
+              maxlength="200"
+              rows="2"
+            ></textarea>
+          </div>
+        </div>
+        @if (dados.tipoItem === 'P') {
+          <div class="secao-form">
+            <h2>Dados do produto</h2>
+            <div class="grade-form">
+              <div class="campo">
+                <label for="codigo">Código de preço *</label
+                ><select id="codigo" name="codigo" [(ngModel)]="produto.codigoPreco" required>
+                  <option [ngValue]="0">Sem acréscimo</option>
+                  <option [ngValue]="1">1 · Acréscimo de 4%</option>
+                  <option [ngValue]="2">2 · Acréscimo de 8%</option>
+                  <option [ngValue]="3">3 · Acréscimo de 10%</option>
+                </select>
+              </div>
+              <div class="campo">
+                <label for="venda">Preço de venda *</label
+                ><input
+                  type="number"
+                  id="venda"
+                  name="venda"
+                  [(ngModel)]="produto.precoVenda"
+                  required
+                  min="0"
+                  max="99999999.99"
+                  step="0.01"
+                />
+              </div>
+              <div class="campo">
+                <label for="unidade">Unidade *</label
+                ><input
+                  id="unidade"
+                  name="unidade"
+                  [(ngModel)]="produto.unidade"
+                  required
+                  maxlength="10"
+                  placeholder="UN, UND…"
+                />
+              </div>
+            </div>
+            <p class="ajuda">
+              Ao registrar uma entrada, o preço de venda será recalculado a partir do custo recebido
+              e do código de preço.
+            </p>
+          </div>
+        }
+        <div class="acoes acoes-form">
+          <button type="submit" [disabled]="form.invalid || !dados.idCategoria || salvando()">
+            {{ salvando() ? 'Salvando…' : 'Salvar item' }}</button
+          ><button type="button" class="secundario" (click)="mostrarFormulario = false">
+            Cancelar
+          </button>
+        </div>
+      </fieldset>
+    </form>
+  </section>
+}
+<section class="painel">
+  <h2>Catálogo cadastrado</h2>
+  @if (carregando()) {
+    <p class="carregando">Carregando catálogo…</p>
+  } @else if (itens().length === 0) {
+    <div class="vazio">
+      <strong>Nenhum item cadastrado.</strong>Adicione seus produtos e serviços para começar.
+    </div>
+  } @else {
+    <div class="tabela-responsiva">
+      <table>
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Categoria</th>
+            <th>Tipo</th>
+            <th>Preço</th>
+            <th>Estoque</th>
+            <th>Situação</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of itens(); track item.idItem) {
+            <tr>
+              <td>
+                <strong>{{ item.item }}</strong
+                ><br /><small class="ajuda">{{ item.descricaoItem }}</small>
+              </td>
+              <td>{{ item.categoria }}</td>
+              <td>{{ item.tipoItem === 'P' ? 'Produto' : 'Serviço' }}</td>
+              <td>{{ item.produto?.precoVenda ?? item.preco | currency: 'BRL' }}</td>
+              <td>
+                {{ item.produto ? (item.produto.quantidadeEstoque ?? 0) : '—' }}
+                {{ item.produto?.unidade }}
+              </td>
+              <td>
+                <span class="selo" [class.inativo]="item.ativoProdutoServico !== 'S'">{{
+                  item.ativoProdutoServico === 'S' ? 'Ativo' : 'Inativo'
+                }}</span>
+              </td>
+              <td>
+                <div class="acoes">
+                  <button class="pequeno secundario" (click)="editar(item)" [disabled]="salvando()">
+                    Editar</button
+                  ><button class="pequeno perigo" (click)="remover(item)" [disabled]="salvando()">
+                    Excluir
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>

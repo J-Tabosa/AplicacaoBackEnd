@@ -1,0 +1,88 @@
+<div class="titulo-pagina">
+  <div>
+    <span class="etiqueta">Cadastros</span>
+    <h1>Categorias</h1>
+    <p class="subtitulo">Organize os produtos e serviços do seu catálogo.</p>
+  </div>
+  <button (click)="nova()" [disabled]="salvando()">Nova categoria</button>
+</div>
+@if (erro()) {
+  <div class="mensagem erro" role="alert">{{ erro() }}</div>
+}
+@if (sucesso()) {
+  <div class="mensagem sucesso" role="status">{{ sucesso() }}</div>
+}
+@if (mostrarFormulario) {
+  <section class="painel">
+    <h2>{{ dados.idcategoria ? 'Editar categoria' : 'Cadastrar categoria' }}</h2>
+    <form #form="ngForm" (ngSubmit)="salvar()">
+      <fieldset [disabled]="salvando()">
+        <div class="campo">
+          <label for="categoria">Nome da categoria *</label
+          ><input
+            id="categoria"
+            name="categoria"
+            [(ngModel)]="dados.categoria"
+            required
+            maxlength="35"
+            placeholder="Ex.: Limpeza automotiva"
+          />
+        </div>
+        <div class="acoes acoes-form">
+          <button type="submit" [disabled]="form.invalid || salvando()">
+            {{ salvando() ? 'Salvando…' : 'Salvar categoria' }}</button
+          ><button type="button" class="secundario" (click)="mostrarFormulario = false">
+            Cancelar
+          </button>
+        </div>
+      </fieldset>
+    </form>
+  </section>
+}
+<section class="painel">
+  <h2>Categorias cadastradas</h2>
+  @if (carregando()) {
+    <p class="carregando">Carregando categorias…</p>
+  } @else if (categorias().length === 0) {
+    <div class="vazio">
+      <strong>Nenhuma categoria cadastrada.</strong>Comece adicionando uma categoria ao catálogo.
+    </div>
+  } @else {
+    <div class="tabela-responsiva">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Categoria</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (categoria of categorias(); track categoria.idcategoria) {
+            <tr>
+              <td>{{ categoria.idcategoria }}</td>
+              <td>{{ categoria.categoria }}</td>
+              <td>
+                <div class="acoes">
+                  <button
+                    class="pequeno secundario"
+                    (click)="editar(categoria)"
+                    [disabled]="salvando()"
+                  >
+                    Editar</button
+                  ><button
+                    class="pequeno perigo"
+                    (click)="remover(categoria)"
+                    [disabled]="salvando()"
+                  >
+                    Excluir
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>
