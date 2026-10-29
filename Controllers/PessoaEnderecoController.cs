@@ -1,6 +1,7 @@
 using AplicacaoBackEnd.DTO;
 using AplicacaoBackEnd.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
 
@@ -20,6 +21,7 @@ public class PessoaEnderecoController : ControllerBase
     }
 
     // GET: api/PessoaEndereco/all
+    [Authorize(Roles = "Funcionario")]
     [HttpGet("all")]
     public async Task<IActionResult> GetPessoasEnderecos()
     {
@@ -39,6 +41,7 @@ public class PessoaEnderecoController : ControllerBase
     }
 
     // GET: api/PessoaEndereco/5
+    [Authorize(Roles = "Funcionario")]
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetPessoaEndereco(int id)
     {
@@ -72,6 +75,12 @@ public class PessoaEnderecoController : ControllerBase
         if (dados.Enderecos.Any(e => e.Idendereco != 0))
         {
             return BadRequest(new { mensagem = "Endereços novos devem ser enviados sem ID ou com ID zero." });
+        }
+
+        dados.Email = string.IsNullOrWhiteSpace(dados.Email) ? null : dados.Email.Trim().ToLowerInvariant();
+        if (dados.Email != null && await _context.Pessoas.AnyAsync(p => p.Email != null && p.Email.Trim().ToLower() == dados.Email))
+        {
+            return Conflict(new { mensagem = "Já existe uma pessoa com este e-mail." });
         }
 
         if (await _context.Pessoas.AnyAsync(p => p.Cpf == dados.Cpf))
@@ -118,6 +127,7 @@ public class PessoaEnderecoController : ControllerBase
 
     // PUT: api/PessoaEndereco/5
     // A lista de endereços recebida será a lista final desse cadastro.
+    [Authorize(Roles = "Funcionario")]
     [HttpPut("{id:int}")]
     public async Task<IActionResult> PutPessoaEndereco(int id, PessoaEnderecoDTO dados)
     {
@@ -146,6 +156,12 @@ public class PessoaEnderecoController : ControllerBase
             }
 
             await _context.Entry(pessoa).Collection(p => p.Enderecos).LoadAsync();
+
+            dados.Email = string.IsNullOrWhiteSpace(dados.Email) ? null : dados.Email.Trim().ToLowerInvariant();
+            if (dados.Email != null && await _context.Pessoas.AnyAsync(p => p.Idpessoa != id && p.Email != null && p.Email.Trim().ToLower() == dados.Email))
+            {
+                return Conflict(new { mensagem = "Já existe outra pessoa com este e-mail." });
+            }
 
             if (await _context.Pessoas.AnyAsync(p => p.Cpf == dados.Cpf && p.Idpessoa != id))
             {
@@ -225,6 +241,7 @@ public class PessoaEnderecoController : ControllerBase
     }
 
     // DELETE: api/PessoaEndereco/5
+    [Authorize(Roles = "Funcionario")]
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> DeletePessoaEndereco(int id)
     {

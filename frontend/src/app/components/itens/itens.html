@@ -8,6 +8,37 @@
     Novo item
   </button>
 </div>
+<section class="painel">
+  <form class="filtros" (ngSubmit)="carregar()">
+    <div class="campo">
+      <label for="nome-busca">Pesquisar por nome</label
+      ><input id="nome-busca" name="nomeBusca" [(ngModel)]="nomeBusca" />
+    </div>
+    <div class="campo">
+      <label for="categoria-busca">Filtrar por categoria</label
+      ><select id="categoria-busca" name="categoriaBusca" [(ngModel)]="categoriaBusca">
+        <option [ngValue]="0">Todas</option>
+        @for (categoria of categorias(); track categoria.idcategoria) {
+          <option [ngValue]="categoria.idcategoria">{{ categoria.categoria }}</option>
+        }
+      </select>
+    </div>
+    <div class="campo">
+      <label for="tipo-busca">Filtrar por tipo</label
+      ><select id="tipo-busca" name="tipoBusca" [(ngModel)]="tipoBusca">
+        <option value="">Todos</option>
+        <option value="P">Produto</option>
+        <option value="S">Serviço</option>
+      </select>
+    </div>
+    <button type="submit">Filtrar catálogo</button>
+  </form>
+</section>
+<app-consulta-id
+  [carregando]="carregando()"
+  (consultar)="consultarId($event)"
+  (limpar)="carregar()"
+></app-consulta-id>
 @if (erro()) {
   <div class="mensagem erro" role="alert">{{ erro() }}</div>
 }
@@ -19,10 +50,26 @@
     <a routerLink="/categorias">Cadastre uma categoria</a> antes de adicionar produtos e serviços.
   </div>
 }
+@if (detalheItem(); as item) {
+  <section class="painel detalhes">
+    <h2>#{{ item.idItem }} · {{ item.item }}</h2>
+    <p>{{ item.descricaoItem }}</p>
+    <p>
+      Categoria: {{ item.categoria }} · {{ item.tipoItem === 'P' ? 'Produto' : 'Serviço' }} ·
+      {{ item.ativoProdutoServico === 'S' ? 'Ativo' : 'Inativo' }}
+    </p>
+    <p>
+      {{ item.produto?.precoVenda ?? item.preco | currency: 'BRL' }} · Saldo:
+      {{ item.produto?.quantidadeEstoque ?? 'Não se aplica' }}
+    </p>
+    <button class="secundario" (click)="detalheItem.set(null)">Fechar detalhes</button>
+  </section>
+}
 @if (mostrarFormulario) {
   <section class="painel">
     <h2>{{ dados.idItem ? 'Editar item' : 'Cadastrar item' }}</h2>
     <form #form="ngForm" (ngSubmit)="salvar()">
+      <app-validacao [form]="form"></app-validacao>
       <fieldset [disabled]="salvando()">
         <div class="grade-form">
           <div class="campo">
@@ -187,7 +234,14 @@
                 <div class="acoes">
                   <button class="pequeno secundario" (click)="editar(item)" [disabled]="salvando()">
                     Editar</button
-                  ><button class="pequeno perigo" (click)="remover(item)" [disabled]="salvando()">
+                  ><button
+                    class="pequeno secundario"
+                    (click)="desativar(item)"
+                    [disabled]="salvando() || item.ativoProdutoServico === 'N'"
+                  >
+                    Desativar
+                  </button>
+                  <button class="pequeno perigo" (click)="remover(item)" [disabled]="salvando()">
                     Excluir
                   </button>
                 </div>

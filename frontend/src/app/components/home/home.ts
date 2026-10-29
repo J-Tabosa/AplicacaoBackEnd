@@ -1,3 +1,4 @@
+import { EstoqueService } from '../../services/estoque-service';
 import { Component, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
@@ -18,6 +19,10 @@ export class HomeComponent implements OnInit {
     funcionarios: 0,
     categorias: 0,
     itens: 0,
+    produtos: 0,
+    servicos: 0,
+    estoque: 0,
+    abertos: 0,
     entradas: 0,
     atendimentos: 0,
   });
@@ -28,6 +33,7 @@ export class HomeComponent implements OnInit {
     private categorias: CategoriaService,
     private itens: ItemService,
     private entradas: EntradaService,
+    private estoque: EstoqueService,
     private atendimentos: AtendimentoService,
   ) {}
 
@@ -44,6 +50,7 @@ export class HomeComponent implements OnInit {
       categorias: this.categorias.listar(),
       itens: this.itens.listar(),
       entradas: this.entradas.listar(),
+      estoque: this.estoque.listar(),
       atendimentos: this.atendimentos.listar(),
     }).subscribe({
       next: (dados) => {
@@ -52,6 +59,10 @@ export class HomeComponent implements OnInit {
           funcionarios: dados.funcionarios.length,
           categorias: dados.categorias.length,
           itens: dados.itens.length,
+          produtos: dados.itens.filter((i) => i.tipoItem === 'P').length,
+          servicos: dados.itens.filter((i) => i.tipoItem === 'S').length,
+          estoque: dados.estoque.reduce((s, i) => s + i.quantidadeEstoque, 0),
+          abertos: dados.atendimentos.filter((a) => a.statusAtendimento === 'A').length,
           entradas: dados.entradas.length,
           atendimentos: dados.atendimentos.length,
         });

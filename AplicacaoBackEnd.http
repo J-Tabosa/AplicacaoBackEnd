@@ -1,5 +1,17 @@
 @baseUrl = https://localhost:7067
 
+### Identificação antes das rotas administrativas (use CPF/nascimento de um funcionário real)
+POST {{baseUrl}}/api/Sessao
+Content-Type: application/json
+
+{
+  "cpf": 12345678901,
+  "dataNascimento": "2000-01-15"
+}
+
+### Sessão atual (o cliente HTTP precisa preservar o cookie da resposta anterior)
+GET {{baseUrl}}/api/Sessao
+
 ### Pessoas e endereços
 GET {{baseUrl}}/api/PessoaEndereco/all
 Accept: application/json
@@ -27,5 +39,37 @@ Accept: application/json
 ### Atendimentos completos
 GET {{baseUrl}}/api/Atendimento/all
 Accept: application/json
+
+### Catálogo público filtrado (troque a categoria)
+GET {{baseUrl}}/api/Items?nome=creme&tipo=P&idCategoria=1
+
+### Estoque administrativo completo
+GET {{baseUrl}}/api/Estoque
+
+### Estoque pelo ID do item
+GET {{baseUrl}}/api/Estoque/1
+
+### Pedidos abertos (funcionário)
+GET {{baseUrl}}/api/Atendimento/all?status=A
+
+### Próprios pedidos (pessoa identificada)
+GET {{baseUrl}}/api/Atendimento/meus
+
+### Compra (troque o item; preço e pessoa são consultados no servidor)
+POST {{baseUrl}}/api/Atendimento/checkout
+Content-Type: application/json
+
+{
+  "itens": [ { "idItem": 1, "quantidadeItem": 1 } ]
+}
+
+### Processar pedido (funcionário; troque o ID do atendimento)
+PUT {{baseUrl}}/api/Atendimento/1/status
+Content-Type: application/json
+
+{ "statusAtendimento": "P" }
+
+### Encerrar sessão
+DELETE {{baseUrl}}/api/Sessao
 
 ### Consulte README.md e /swagger para os JSONs de POST e PUT.

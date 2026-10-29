@@ -1,6 +1,7 @@
 using AplicacaoBackEnd.DTO;
 using AplicacaoBackEnd.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
 
@@ -8,6 +9,7 @@ namespace AplicacaoBackEnd.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
+[Authorize(Roles = "Funcionario")]
 public class FuncionarioController : ControllerBase
 {
     private readonly DbAtendimentoContext _context;
@@ -79,6 +81,12 @@ public class FuncionarioController : ControllerBase
         if (dados.Enderecos.Any(e => e.Idendereco != 0))
         {
             return BadRequest(new { mensagem = "Endereços novos devem ser enviados sem ID ou com ID zero." });
+        }
+
+        dados.Email = string.IsNullOrWhiteSpace(dados.Email) ? null : dados.Email.Trim().ToLowerInvariant();
+        if (dados.Email != null && await _context.Pessoas.AnyAsync(p => p.Email != null && p.Email.Trim().ToLower() == dados.Email))
+        {
+            return Conflict(new { mensagem = "Já existe uma pessoa com este e-mail." });
         }
 
         if (await _context.Pessoas.AnyAsync(p => p.Cpf == dados.Cpf))
@@ -180,6 +188,12 @@ public class FuncionarioController : ControllerBase
             }
 
             await _context.Entry(pessoa).Collection(p => p.Enderecos).LoadAsync();
+
+            dados.Email = string.IsNullOrWhiteSpace(dados.Email) ? null : dados.Email.Trim().ToLowerInvariant();
+            if (dados.Email != null && await _context.Pessoas.AnyAsync(p => p.Idpessoa != id && p.Email != null && p.Email.Trim().ToLower() == dados.Email))
+            {
+                return Conflict(new { mensagem = "Já existe outra pessoa com este e-mail." });
+            }
 
             if (await _context.Pessoas.AnyAsync(p => p.Cpf == dados.Cpf && p.Idpessoa != id))
             {

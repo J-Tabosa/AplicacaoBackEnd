@@ -1,3 +1,7 @@
+import { nomeStatus } from '../../models/status';
+import { PedidoDetalhesComponent } from '../pedido-detalhes/pedido-detalhes';
+import { ConsultaIdComponent } from '../consulta-id/consulta-id';
+import { ValidacaoComponent } from '../validacao/validacao';
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -15,7 +19,14 @@ import { mensagemErro } from '../../services/erro-api';
 
 @Component({
   selector: 'app-atendimentos',
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [
+    PedidoDetalhesComponent,
+    ConsultaIdComponent,
+    ValidacaoComponent,
+    CommonModule,
+    FormsModule,
+    RouterLink,
+  ],
   templateUrl: './atendimentos.html',
 })
 export class AtendimentosComponent implements OnInit {
@@ -29,6 +40,8 @@ export class AtendimentosComponent implements OnInit {
   erro = signal('');
   sucesso = signal('');
   mostrarFormulario = false;
+  statusBusca = '';
+  nomeStatus = nomeStatus;
   dados = new Atendimento();
 
   constructor(
@@ -42,10 +55,28 @@ export class AtendimentosComponent implements OnInit {
     this.carregar();
   }
 
+  consultarId(id: number) {
+    this.erro.set('');
+    this.carregando.set(true);
+    this.service.buscar(id).subscribe({
+      next: (dados) => {
+        this.atendimentos.set([dados]);
+        this.detalhes.set(dados);
+        this.carregando.set(false);
+      },
+      error: (erro) => {
+        this.atendimentos.set([]);
+        this.erro.set(mensagemErro(erro));
+        this.carregando.set(false);
+      },
+    });
+  }
+
   carregar() {
+    this.detalhes.set(null);
     this.carregando.set(true);
     forkJoin({
-      atendimentos: this.service.listar(),
+      atendimentos: this.service.listar(this.statusBusca),
       pessoas: this.pessoaService.listar(),
       funcionarios: this.funcionarioService.listar(),
       itens: this.itemService.listar(),
@@ -82,9 +113,14 @@ export class AtendimentosComponent implements OnInit {
   }
 
   verDetalhes(atendimento: Atendimento) {
-    this.mostrarFormulario = false;
-    this.detalhes.set(atendimento);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    this.service.buscar(atendimento.idAtendimento).subscribe({
+      next: (dados) => {
+        this.mostrarFormulario = false;
+        this.detalhes.set(dados);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      },
+      error: (erro) => this.erro.set(mensagemErro(erro)),
+    });
   }
 
   adicionarItem() {
@@ -179,6 +215,28 @@ export class AtendimentosComponent implements OnInit {
       error: (erro) => {
         this.erro.set(mensagemErro(erro));
         this.salvando.set(false);
+      },
+    });
+  }
+
+  mudarStatus(pedido: Atendimento, proximo: string) {
+    if (
+      proximo === 'C' &&
+      !window.confirm('Cancelar este pedido e devolver os produtos ao estoque?')
+    )
+      return;
+    this.erro.set('');
+    this.salvando.set(true);
+    this.service.atualizarStatus(pedido.idAtendimento, proximo).subscribe({
+      next: () => {
+        this.salvando.set(false);
+        this.detalhes.set(null);
+        this.sucesso.set('Situação do pedido atualizada.');
+        this.carregar();
+      },
+      error: (erro) => {
+        this.salvando.set(false);
+        this.erro.set(mensagemErro(erro));
       },
     });
   }

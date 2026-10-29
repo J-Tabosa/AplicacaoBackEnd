@@ -1,6 +1,7 @@
 using AplicacaoBackEnd.DTO;
 using AplicacaoBackEnd.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
 
@@ -8,6 +9,7 @@ namespace AplicacaoBackEnd.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
+[Authorize(Roles = "Funcionario")]
 public class ProdutoItemController : ControllerBase
 {
     private readonly DbAtendimentoContext _context;

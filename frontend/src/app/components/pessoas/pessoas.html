@@ -14,16 +14,37 @@
     {{ funcionario ? 'Novo funcionário' : 'Nova pessoa' }}
   </button>
 </div>
+<app-consulta-id
+  [carregando]="carregando()"
+  (consultar)="consultarId($event)"
+  (limpar)="carregar()"
+></app-consulta-id>
 @if (erro()) {
   <div class="mensagem erro" role="alert">{{ erro() }}</div>
 }
 @if (sucesso()) {
   <div class="mensagem sucesso" role="status">{{ sucesso() }}</div>
 }
+@if (detalhePessoa(); as pessoa) {
+  <section class="painel detalhes">
+    <div class="acoes">
+      <h2>Cadastro #{{ pessoa.idpessoa }} · {{ pessoa.nome }}</h2>
+      <button class="secundario pequeno" (click)="detalhePessoa.set(null)">Fechar detalhes</button>
+    </div>
+    <p>
+      CPF: {{ pessoa.cpf }} · Nascimento: {{ pessoa.dataNascimento | date: 'dd/MM/yyyy' : 'UTC' }}
+    </p>
+    <p>{{ pessoa.email }} · {{ pessoa.telefone }}</p>
+    @for (endereco of pessoa.enderecos; track endereco.idendereco) {
+      <p>CEP {{ endereco.cep }} · Nº {{ endereco.numero || 's/n' }} · {{ endereco.complemento }}</p>
+    }
+  </section>
+}
 @if (mostrarFormulario) {
   <section class="painel">
     <h2>{{ dados.idpessoa ? 'Editar cadastro' : 'Novo cadastro' }}</h2>
     <form #form="ngForm" (ngSubmit)="salvar()">
+      <app-validacao [form]="form"></app-validacao>
       <fieldset [disabled]="salvando()">
         <div class="grade-form">
           <div class="campo">

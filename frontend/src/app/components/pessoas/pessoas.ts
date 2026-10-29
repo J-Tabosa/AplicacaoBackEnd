@@ -1,3 +1,5 @@
+import { ConsultaIdComponent } from '../consulta-id/consulta-id';
+import { ValidacaoComponent } from '../validacao/validacao';
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -12,7 +14,7 @@ import { mensagemErro } from '../../services/erro-api';
 
 @Component({
   selector: 'app-pessoas',
-  imports: [CommonModule, FormsModule],
+  imports: [ConsultaIdComponent, ValidacaoComponent, CommonModule, FormsModule],
   templateUrl: './pessoas.html',
 })
 export class PessoasComponent implements OnInit {
@@ -23,6 +25,7 @@ export class PessoasComponent implements OnInit {
   sucesso = signal('');
   funcionario = false;
   mostrarFormulario = false;
+  detalhePessoa = signal<Pessoa | Funcionario | null>(null);
   dados = new Pessoa();
   cpf = '';
   telefone = '';
@@ -40,7 +43,25 @@ export class PessoasComponent implements OnInit {
     this.carregar();
   }
 
+  consultarId(id: number) {
+    this.erro.set('');
+    this.carregando.set(true);
+    (this.funcionario ? this.funcionarios.buscar(id) : this.pessoas.buscar(id)).subscribe({
+      next: (dados) => {
+        this.lista.set([dados]);
+        this.detalhePessoa.set(dados);
+        this.carregando.set(false);
+      },
+      error: (erro) => {
+        this.lista.set([]);
+        this.erro.set(mensagemErro(erro));
+        this.carregando.set(false);
+      },
+    });
+  }
+
   carregar() {
+    this.detalhePessoa.set(null);
     this.carregando.set(true);
     const consulta = this.funcionario ? this.funcionarios.listar() : this.pessoas.listar();
     consulta.subscribe({

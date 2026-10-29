@@ -10,8 +10,12 @@ export class AtendimentoService {
 
   constructor(private http: HttpClient) {}
 
-  listar(): Observable<Atendimento[]> {
-    return this.http.get<Atendimento[]>(`${this.url}/all`);
+  listar(status = ''): Observable<Atendimento[]> {
+    return this.http.get<Atendimento[]>(`${this.url}/all`, { params: status ? { status } : {} });
+  }
+
+  atualizarStatus(id: number, statusAtendimento: string) {
+    return this.http.put<void>(`${this.url}/${id}/status`, { statusAtendimento });
   }
 
   buscar(id: number): Observable<Atendimento> {

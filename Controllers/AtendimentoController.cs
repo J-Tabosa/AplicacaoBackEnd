@@ -1,8 +1,10 @@
 using AplicacaoBackEnd.DTO;
 using AplicacaoBackEnd.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
+using System.Security.Claims;
 
 namespace AplicacaoBackEnd.Controllers;
 
@@ -19,10 +21,18 @@ public class AtendimentoController : ControllerBase
         _logger = logger;
     }
 
+    [Authorize(Roles = "Funcionario")]
     [HttpGet("all")]
-    public async Task<IActionResult> GetAtendimentos()
+    public async Task<IActionResult> GetAtendimentos(string? status = null)
     {
-        var atendimentos = await ConsultarAtendimentos()
+        var consulta = ConsultarAtendimentos();
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            var codigo = NormalizarStatus(status);
+            if (codigo == null) { return BadRequest(new { mensagem = "Situação inválida." }); }
+            consulta = consulta.Where(a => a.StatusAtendimento == codigo);
+        }
+        var atendimentos = await consulta
             .OrderBy(a => a.Idatendimento)
             .ToListAsync();
 
@@ -35,6 +45,7 @@ public class AtendimentoController : ControllerBase
         return Ok(resposta);
     }
 
+    [Authorize(Roles = "Funcionario")]
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetAtendimento(int id)
     {
@@ -49,9 +60,14 @@ public class AtendimentoController : ControllerBase
         return Ok(ExibirAtendimento(atendimento));
     }
 
+    [Authorize(Roles = "Funcionario")]
     [HttpPost]
     public async Task<IActionResult> PostAtendimento(AtendimentoDTO dados)
     {
+        if (dados.StatusAtendimento != "A")
+        {
+            return BadRequest(new { mensagem = "Novos pedidos devem começar em aberto (A)." });
+        }
         if (dados.DataAtendimento == null || dados.DataAtendimento.Value.Year < 1000)
         {
             return BadRequest(new { mensagem = "Informe uma data de atendimento válida." });
@@ -97,6 +113,7 @@ public class AtendimentoController : ControllerBase
     }
 
     // A lista enviada no PUT representa todos os itens que devem permanecer.
+    [Authorize(Roles = "Funcionario")]
     [HttpPut("{id:int}")]
     public async Task<IActionResult> PutAtendimento(int id, AtendimentoDTO dados)
     {
@@ -114,9 +131,19 @@ public class AtendimentoController : ControllerBase
                 return NotFound(new { mensagem = "Atendimento não localizado." });
             }
 
+            if (atendimento.StatusAtendimento != "A" && atendimento.StatusAtendimento != null)
+            {
+                return Conflict(new { mensagem = "Somente pedidos em aberto podem ter seus itens alterados." });
+            }
+
             if (!await _context.Pessoas.AnyAsync(p => p.Idpessoa == dados.IdPessoa))
             {
                 return NotFound(new { mensagem = "Pessoa atendida não localizada." });
+            }
+
+            if (dados.StatusAtendimento != "A")
+            {
+                return Conflict(new { mensagem = "Use a operação de situação do pedido para avançar ou cancelar." });
             }
 
             atendimento.Idpessoa = dados.IdPessoa;
@@ -140,6 +167,7 @@ public class AtendimentoController : ControllerBase
         }
     }
 
+    [Authorize(Roles = "Funcionario")]
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> DeleteAtendimento(int id)
     {
@@ -152,11 +180,18 @@ public class AtendimentoController : ControllerBase
                 return NotFound(new { mensagem = "Atendimento não localizado." });
             }
 
-            // Lista vazia remove os vínculos e devolve todos os produtos ao estoque.
-            var erro = await AtualizarItens(atendimento, new List<AtendimentoItemDTO>(), true);
-            if (erro != null)
+            if (atendimento.StatusAtendimento == "F" || atendimento.StatusAtendimento == "P")
             {
-                return erro;
+                return Conflict(new { mensagem = "Pedidos em processamento ou concluídos não podem ser apagados. Use o fluxo de situação." });
+            }
+            if (atendimento.StatusAtendimento == "C")
+            {
+                _context.Atendimentoitems.RemoveRange(atendimento.Atendimentoitems);
+            }
+            else
+            {
+                var erro = await AtualizarItens(atendimento, new List<AtendimentoItemDTO>(), true);
+                if (erro != null) { return erro; }
             }
 
             _context.Atendimentos.Remove(atendimento);
@@ -172,6 +207,7 @@ public class AtendimentoController : ControllerBase
         }
     }
 
+    [Authorize(Roles = "Funcionario")]
     [HttpPost("{id:int}/itens")]
     public async Task<IActionResult> PostItem(int id, AtendimentoItemDTO dados)
     {
@@ -182,6 +218,11 @@ public class AtendimentoController : ControllerBase
             if (atendimento == null)
             {
                 return NotFound(new { mensagem = "Atendimento não localizado." });
+            }
+
+            if (atendimento.StatusAtendimento != "A" && atendimento.StatusAtendimento != null)
+            {
+                return Conflict(new { mensagem = "Somente pedidos em aberto podem ter seus itens alterados." });
             }
 
             var itens = CopiarItens(atendimento);
@@ -209,6 +250,7 @@ public class AtendimentoController : ControllerBase
         }
     }
 
+    [Authorize(Roles = "Funcionario")]
     [HttpPut("{id:int}/itens/{idItem:int}")]
     public async Task<IActionResult> PutItem(int id, int idItem, AtendimentoItemDTO dados)
     {
@@ -224,6 +266,11 @@ public class AtendimentoController : ControllerBase
             if (atendimento == null)
             {
                 return NotFound(new { mensagem = "Atendimento não localizado." });
+            }
+
+            if (atendimento.StatusAtendimento != "A" && atendimento.StatusAtendimento != null)
+            {
+                return Conflict(new { mensagem = "Somente pedidos em aberto podem ter seus itens alterados." });
             }
 
             var itens = CopiarItens(atendimento);
@@ -254,6 +301,7 @@ public class AtendimentoController : ControllerBase
         }
     }
 
+    [Authorize(Roles = "Funcionario")]
     [HttpDelete("{id:int}/itens/{idItem:int}")]
     public async Task<IActionResult> DeleteItem(int id, int idItem)
     {
@@ -264,6 +312,11 @@ public class AtendimentoController : ControllerBase
             if (atendimento == null)
             {
                 return NotFound(new { mensagem = "Atendimento não localizado." });
+            }
+
+            if (atendimento.StatusAtendimento != "A" && atendimento.StatusAtendimento != null)
+            {
+                return Conflict(new { mensagem = "Somente pedidos em aberto podem ter seus itens alterados." });
             }
 
             var itens = CopiarItens(atendimento);
@@ -296,12 +349,148 @@ public class AtendimentoController : ControllerBase
         }
     }
 
+
+    [Authorize]
+    [HttpGet("meus")]
+    public async Task<IActionResult> MeusPedidos()
+    {
+        int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var idCliente);
+        var pedidos = await ConsultarAtendimentos().Where(a => a.Idpessoa == idCliente)
+            .OrderByDescending(a => a.Idatendimento).ToListAsync();
+        return Ok(pedidos.Select(ExibirAtendimento));
+    }
+
+    [Authorize]
+    [HttpGet("meus/{id:int}")]
+    public async Task<IActionResult> MeuPedido(int id)
+    {
+        int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var idCliente);
+        var pedido = await ConsultarAtendimentos()
+            .FirstOrDefaultAsync(a => a.Idatendimento == id && a.Idpessoa == idCliente);
+        if (pedido == null) { return NotFound(new { mensagem = "Pedido não localizado para este cliente." }); }
+        return Ok(ExibirAtendimento(pedido));
+    }
+
+    [Authorize]
+    [HttpPost("checkout")]
+    public async Task<IActionResult> ConfirmarCompra(CompraDTO dados)
+    {
+        int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var idCliente);
+        if (dados.Itens.Any(i => i == null) || dados.Itens.Select(i => i.IdItem).Distinct().Count() != dados.Itens.Count)
+        {
+            return BadRequest(new { mensagem = "Não repita itens no carrinho." });
+        }
+        await using var transacao = await _context.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted);
+        try
+        {
+            var funcionario = await _context.Funcionarios.AsNoTracking()
+                .Where(f => f.IdpessoaNavigation.AtivoPessoa == "S").OrderBy(f => f.Idpessoa).FirstOrDefaultAsync();
+            if (funcionario == null)
+            {
+                return Conflict(new { mensagem = "A loja ainda não possui funcionário responsável para receber pedidos." });
+            }
+            var itens = new List<AtendimentoItemDTO>();
+            foreach (var linha in dados.Itens)
+            {
+                var item = await _context.Items.AsNoTracking().Include(i => i.Produto)
+                    .FirstOrDefaultAsync(i => i.Iditem == linha.IdItem && i.AtivoProdutoServico == "S");
+                if (item == null) { return Conflict(new { mensagem = "Um dos itens não está mais disponível. Atualize seu carrinho." }); }
+                if (item.TipoItem == "P" && (item.Produto == null || item.Produto.PrecoVenda == null))
+                {
+                    return Conflict(new { mensagem = "Produto sem preço de venda disponível." });
+                }
+                decimal preco = item.TipoItem == "P" ? item.Produto!.PrecoVenda!.Value : item.Preco;
+                itens.Add(new AtendimentoItemDTO
+                {
+                    IdItem = item.Iditem,
+                    IdFuncionario = funcionario.Idpessoa,
+                    QuantidadeItem = linha.QuantidadeItem,
+                    ValorUnitarioEntrada = preco
+                });
+            }
+            var pedido = new Atendimento
+            {
+                Idpessoa = idCliente,
+                DataAtendimento = DateOnly.FromDateTime(DateTime.Today),
+                StatusAtendimento = "A"
+            };
+            _context.Atendimentos.Add(pedido);
+            await _context.SaveChangesAsync();
+            var erro = await AtualizarItens(pedido, itens);
+            if (erro != null) { return erro; }
+            var resposta = await ConsultarAtendimentos().FirstAsync(a => a.Idatendimento == pedido.Idatendimento);
+            await transacao.CommitAsync();
+            return CreatedAtAction(nameof(MeuPedido), new { id = pedido.Idatendimento }, ExibirAtendimento(resposta));
+        }
+        catch (DbUpdateException ex)
+        {
+            await transacao.RollbackAsync();
+            _logger.LogError(ex, "Erro ao confirmar a compra.");
+            return Conflict(new { mensagem = "Não foi possível confirmar o pedido. Confira a disponibilidade dos itens." });
+        }
+    }
+
+    [Authorize(Roles = "Funcionario")]
+    [HttpPut("{id:int}/status")]
+    public async Task<IActionResult> AtualizarStatus(int id, PedidoStatusDTO dados)
+    {
+        await using var transacao = await _context.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted);
+        try
+        {
+            var pedido = await BuscarAtendimentoParaAlterar(id);
+            if (pedido == null) { return NotFound(new { mensagem = "Pedido não localizado." }); }
+            var atual = pedido.StatusAtendimento ?? "A";
+            var proximo = dados.StatusAtendimento;
+            if (atual == proximo) { return NoContent(); }
+            var permitido = (atual == "A" && (proximo == "P" || proximo == "C"))
+                || (atual == "P" && (proximo == "F" || proximo == "C"));
+            if (!permitido)
+            {
+                return Conflict(new { mensagem = "Transição inválida. Use Aberto → Em processamento → Concluído, ou cancele antes de concluir." });
+            }
+            if (proximo == "C")
+            {
+                var ids = pedido.Atendimentoitems.Select(i => i.Iditem).ToList();
+                var produtos = await _context.Produtos.Where(p => ids.Contains(p.Iditem)).Select(p => p.Iditem).ToListAsync();
+                var estoques = await BloquearEstoques(produtos);
+                if (estoques.Count != produtos.Count) { return Conflict(new { mensagem = "Um produto não possui registro de estoque." }); }
+                foreach (var estoque in estoques)
+                {
+                    var quantidade = pedido.Atendimentoitems.First(i => i.Iditem == estoque.Iditem).QuantidadeItem;
+                    long saldo = (long)estoque.QuantidadeEstoque + quantidade;
+                    if (saldo > int.MaxValue) { return Conflict(new { mensagem = "O estorno ultrapassa o limite do estoque." }); }
+                    estoque.QuantidadeEstoque = (int)saldo;
+                }
+            }
+            pedido.StatusAtendimento = proximo;
+            await _context.SaveChangesAsync();
+            await transacao.CommitAsync();
+            return NoContent();
+        }
+        catch (DbUpdateException ex)
+        {
+            await transacao.RollbackAsync();
+            _logger.LogError(ex, "Erro ao atualizar a situação do pedido.");
+            return Conflict(new { mensagem = "Não foi possível alterar a situação do pedido." });
+        }
+    }
+
+    private string? NormalizarStatus(string status)
+    {
+        if (status.Equals("Aberto", StringComparison.OrdinalIgnoreCase) || status == "A") { return "A"; }
+        if (status.Equals("Em processamento", StringComparison.OrdinalIgnoreCase) || status == "P") { return "P"; }
+        if (status.Equals("Concluído", StringComparison.OrdinalIgnoreCase) || status == "F") { return "F"; }
+        if (status.Equals("Cancelado", StringComparison.OrdinalIgnoreCase) || status == "C") { return "C"; }
+        return null;
+    }
+
     // Os métodos privados abaixo pertencem somente a este controller.
     // Evitam repetir as mesmas consultas e regras nas oito rotas acima.
     private IQueryable<Atendimento> ConsultarAtendimentos()
     {
         return _context.Atendimentos
             .AsNoTracking()
+            .AsSplitQuery()
             .Include(a => a.IdpessoaNavigation).ThenInclude(p => p.Enderecos)
             .Include(a => a.Atendimentoitems).ThenInclude(i => i.IditemNavigation)
             .Include(a => a.Atendimentoitems).ThenInclude(i => i.IdfuncionarioNavigation)
@@ -517,6 +706,7 @@ public class AtendimentoController : ControllerBase
                 TipoItem = item.IditemNavigation.TipoItem,
                 IdFuncionario = item.Idfuncionario,
                 Funcionario = item.IdfuncionarioNavigation.IdpessoaNavigation.Nome,
+                CargoFuncionario = item.IdfuncionarioNavigation.Cargo,
                 item.QuantidadeItem,
                 ValorUnitarioEntrada = item.ValorunitarioEntrada,
                 Subtotal = subtotal

@@ -1,6 +1,7 @@
 using AplicacaoBackEnd.DTO;
 using AplicacaoBackEnd.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
 
@@ -8,6 +9,7 @@ namespace AplicacaoBackEnd.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
+[Authorize(Roles = "Funcionario")]
 public class ItemsController : ControllerBase
 {
     private readonly DbAtendimentoContext _context;
@@ -19,10 +21,22 @@ public class ItemsController : ControllerBase
         _logger = logger;
     }
 
+    [AllowAnonymous]
     [HttpGet]
-    public async Task<IActionResult> GetItems()
+    public async Task<IActionResult> GetItems(string? nome = null, int? idCategoria = null, string? tipo = null, string? ativo = null)
     {
-        var itens = await _context.Items
+        if (tipo != null && tipo != "P" && tipo != "S")
+        {
+            return BadRequest(new { mensagem = "O tipo deve ser P ou S." });
+        }
+        var consulta = _context.Items.AsNoTracking().AsQueryable();
+        if (!User.IsInRole("Funcionario")) { consulta = consulta.Where(i => i.AtivoProdutoServico == "S"); }
+        else if (ativo == "S" || ativo == "N") { consulta = consulta.Where(i => i.AtivoProdutoServico == ativo); }
+        if (!string.IsNullOrWhiteSpace(nome)) { consulta = consulta.Where(i => i.Item1.Contains(nome.Trim())); }
+        if (idCategoria.HasValue) { consulta = consulta.Where(i => i.Idcategoria == idCategoria); }
+        if (tipo != null) { consulta = consulta.Where(i => i.TipoItem == tipo); }
+
+        var itens = await consulta
             .Include(i => i.IdcategoriaNavigation)
             .Include(i => i.Produto)
             .ThenInclude(p => p!.Estoque)
@@ -39,6 +53,7 @@ public class ItemsController : ControllerBase
         return Ok(resposta);
     }
 
+    [AllowAnonymous]
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetItem(int id)
     {
@@ -49,7 +64,7 @@ public class ItemsController : ControllerBase
             .AsNoTracking()
             .FirstOrDefaultAsync(i => i.Iditem == id);
 
-        if (item == null)
+        if (item == null || (!User.IsInRole("Funcionario") && item.AtivoProdutoServico != "S"))
         {
             return NotFound(new { mensagem = "Item não localizado." });
         }

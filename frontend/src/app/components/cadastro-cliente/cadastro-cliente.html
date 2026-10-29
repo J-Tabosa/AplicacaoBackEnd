@@ -1,0 +1,149 @@
+<section class="painel">
+  <span class="etiqueta">SEU CADASTRO</span>
+  <h1>Cadastro do cliente</h1>
+  <p>Informe seus dados e pelo menos um endereço.</p>
+  @if (erro()) {
+    <div class="mensagem erro" role="alert">{{ erro() }}</div>
+  }
+  @if (sucesso()) {
+    <div class="mensagem sucesso" role="status">
+      {{ sucesso() }} <a routerLink="/loja/identificar">Identificar-me</a>
+    </div>
+  }
+  <form #form="ngForm" (ngSubmit)="salvar()">
+    <app-validacao [form]="form"></app-validacao>
+    <fieldset [disabled]="salvando()">
+      <div class="grade-form">
+        <div class="campo">
+          <label for="nome">Nome completo *</label
+          ><input id="nome" name="nome" [(ngModel)]="dados.nome" required maxlength="100" />
+        </div>
+        <div class="campo">
+          <label for="cpf">CPF *</label
+          ><input
+            id="cpf"
+            name="cpf"
+            [(ngModel)]="cpf"
+            required
+            pattern="[0-9]{11}"
+            maxlength="11"
+            inputmode="numeric"
+            placeholder="Somente os 11 dígitos"
+          />
+        </div>
+        <div class="campo">
+          <label for="nascimento">Data de nascimento *</label
+          ><input
+            type="date"
+            id="nascimento"
+            name="nascimento"
+            [(ngModel)]="dados.dataNascimento"
+            required
+            min="1000-01-01"
+          />
+        </div>
+        <div class="campo">
+          <label for="sexo">Sexo</label
+          ><select id="sexo" name="sexo" [(ngModel)]="dados.sexo">
+            <option value="N">Não informado</option>
+            <option value="M">Masculino</option>
+            <option value="F">Feminino</option>
+          </select>
+        </div>
+        <div class="campo">
+          <label for="email">E-mail</label
+          ><input
+            type="email"
+            id="email"
+            name="email"
+            [(ngModel)]="dados.email"
+            email
+            maxlength="100"
+          />
+        </div>
+        <div class="campo">
+          <label for="telefone">Telefone</label
+          ><input
+            type="tel"
+            id="telefone"
+            name="telefone"
+            [(ngModel)]="telefone"
+            pattern="[0-9]{8,13}"
+            maxlength="13"
+            placeholder="DDD e número, sem pontuação"
+          />
+        </div>
+      </div>
+      <div class="secao-form">
+        <h2>Endereços</h2>
+        <p class="ajuda">
+          Informe pelo menos um endereço para o seu cadastro.
+        </p>
+        @for (endereco of dados.enderecos; track $index; let i = $index) {
+          <div class="endereco">
+            <div class="acoes">
+              <h3>Endereço {{ i + 1 }}</h3>
+              <button
+                type="button"
+                class="pequeno perigo"
+                (click)="removerEndereco(i)"
+                [disabled]="dados.enderecos.length === 1"
+              >
+                Remover endereço
+              </button>
+            </div>
+            <div class="grade-form">
+              <div class="campo">
+                <label [for]="'cep' + i">CEP *</label
+                ><input
+                  [id]="'cep' + i"
+                  [name]="'cep' + i"
+                  [(ngModel)]="endereco.cep"
+                  required
+                  pattern="[0-9]{8}"
+                  maxlength="8"
+                  inputmode="numeric"
+                  placeholder="8 dígitos, sem hífen"
+                />
+              </div>
+              <div class="campo">
+                <label [for]="'numero' + i">Número</label
+                ><input
+                  [id]="'numero' + i"
+                  [name]="'numero' + i"
+                  [(ngModel)]="endereco.numero"
+                  maxlength="10"
+                />
+              </div>
+              <div class="campo inteiro">
+                <label [for]="'complemento' + i">Complemento</label
+                ><input
+                  [id]="'complemento' + i"
+                  [name]="'complemento' + i"
+                  [(ngModel)]="endereco.complemento"
+                  maxlength="150"
+                />
+              </div>
+            </div>
+          </div>
+        }
+        <button
+          type="button"
+          class="secundario"
+          style="margin-top: 14px"
+          (click)="adicionarEndereco()"
+        >
+          Adicionar endereço
+        </button>
+      </div>
+      <div class="acoes acoes-form">
+        <button type="submit" [disabled]="form.invalid || salvando()">
+          {{ salvando() ? 'Salvando…' : 'Salvar cadastro' }}</button
+        ><button type="button" class="secundario" (click)="limpar(); form.resetForm(dados)">
+          Limpar
+        </button>
+      </div>
+    </fieldset>
+  </form>
+  <a routerLink="/loja">← Voltar ao catálogo</a>
+</section>

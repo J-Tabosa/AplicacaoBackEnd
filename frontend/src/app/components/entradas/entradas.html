@@ -8,6 +8,11 @@
     Nova entrada
   </button>
 </div>
+<app-consulta-id
+  [carregando]="carregando()"
+  (consultar)="consultarId($event)"
+  (limpar)="carregar()"
+></app-consulta-id>
 @if (erro()) {
   <div class="mensagem erro" role="alert">{{ erro() }}</div>
 }
@@ -23,6 +28,7 @@
   <section class="painel">
     <h2>{{ dados.idEntradaProduto ? 'Editar entrada' : 'Registrar entrada' }}</h2>
     <form #form="ngForm" (ngSubmit)="salvar()">
+      <app-validacao [form]="form"></app-validacao>
       <fieldset [disabled]="salvando()">
         <div class="grade-form">
           <div class="campo">

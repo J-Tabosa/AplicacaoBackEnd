@@ -17,6 +17,25 @@
     Novo atendimento
   </button>
 </div>
+<section class="painel">
+  <div class="filtros">
+    <div class="campo">
+      <label for="status-busca">Filtrar pedidos por situação</label
+      ><select id="status-busca" [disabled]="carregando() || salvando()" [(ngModel)]="statusBusca" (ngModelChange)="carregar()">
+        <option value="">Todos os pedidos</option>
+        <option value="A">Abertos</option>
+        <option value="P">Em processamento</option>
+        <option value="F">Concluídos</option>
+        <option value="C">Cancelados</option>
+      </select>
+    </div>
+  </div>
+</section>
+<app-consulta-id
+  [carregando]="carregando()"
+  (consultar)="consultarId($event)"
+  (limpar)="carregar()"
+></app-consulta-id>
 @if (erro()) {
   <div class="mensagem erro" role="alert">{{ erro() }}</div>
 }
@@ -40,59 +59,14 @@
       <h2>Atendimento #{{ atendimento.idAtendimento }}</h2>
       <button class="pequeno secundario" (click)="detalhes.set(null)">Fechar detalhes</button>
     </div>
-    <p>
-      <strong>Cliente:</strong> {{ atendimento.cliente }} · <strong>CPF:</strong>
-      {{ atendimento.pessoa.cpf.toString().padStart(11, '0') }}
-    </p>
-    <p>
-      <strong>Data:</strong> {{ atendimento.dataAtendimento | date: 'dd/MM/yyyy' : 'UTC' }} ·
-      <strong>Situação:</strong>
-      {{ atendimento.statusAtendimento === 'F' ? 'Finalizado' : 'Aberto' }}
-    </p>
-    <p>
-      <strong>Contato:</strong>
-      {{ atendimento.pessoa.email || atendimento.pessoa.telefone || 'Não informado' }}
-    </p>
-    @for (endereco of atendimento.pessoa.enderecos; track endereco.idendereco) {
-      <p class="ajuda">
-        Endereço: CEP {{ endereco.cep }} · Nº {{ endereco.numero || 's/n' }}
-        {{ endereco.complemento }}
-      </p>
-    }
-    <div class="tabela-responsiva">
-      <table>
-        <thead>
-          <tr>
-            <th>Item</th>
-            <th>Funcionário</th>
-            <th>Quantidade</th>
-            <th>Preço praticado</th>
-            <th>Subtotal</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (item of atendimento.itens; track item.idItem) {
-            <tr>
-              <td>
-                {{ item.item }}
-                <span class="selo">{{ item.tipoItem === 'P' ? 'Produto' : 'Serviço' }}</span>
-              </td>
-              <td>{{ item.funcionario }}</td>
-              <td>{{ item.quantidadeItem }}</td>
-              <td>{{ item.valorUnitarioEntrada | currency: 'BRL' }}</td>
-              <td>{{ item.subtotal | currency: 'BRL' }}</td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    </div>
-    <div class="total">Total: {{ atendimento.valorTotal | currency: 'BRL' }}</div>
+    <app-pedido-detalhes [pedido]="atendimento"></app-pedido-detalhes>
   </section>
 }
 @if (mostrarFormulario) {
   <section class="painel">
     <h2>{{ dados.idAtendimento ? 'Editar atendimento' : 'Registrar atendimento' }}</h2>
     <form #form="ngForm" (ngSubmit)="salvar()">
+      <app-validacao [form]="form"></app-validacao>
       <fieldset [disabled]="salvando()">
         <div class="grade-form">
           <div class="campo">
@@ -119,7 +93,6 @@
             <label for="situacao">Situação *</label
             ><select id="situacao" name="situacao" [(ngModel)]="dados.statusAtendimento" required>
               <option value="A">Aberto</option>
-              <option value="F">Finalizado</option>
             </select>
           </div>
         </div>
@@ -255,9 +228,7 @@
               <td>{{ atendimento.itens.length }}</td>
               <td>{{ atendimento.valorTotal | currency: 'BRL' }}</td>
               <td>
-                <span class="selo">{{
-                  atendimento.statusAtendimento === 'F' ? 'Finalizado' : 'Aberto'
-                }}</span>
+                <span class="selo">{{ nomeStatus(atendimento.statusAtendimento) }}</span>
               </td>
               <td>
                 <div class="acoes">
@@ -270,13 +241,43 @@
                   ><button
                     class="pequeno secundario"
                     (click)="editar(atendimento)"
-                    [disabled]="salvando()"
+                    [disabled]="salvando() || atendimento.statusAtendimento !== 'A'"
                   >
-                    Editar</button
-                  ><button
+                    Editar
+                  </button>
+                  @if (atendimento.statusAtendimento === 'A') {
+                    <button
+                      class="pequeno"
+                      (click)="mudarStatus(atendimento, 'P')"
+                      [disabled]="salvando()"
+                    >
+                      Processar
+                    </button>
+                  }
+                  @if (atendimento.statusAtendimento === 'P') {
+                    <button
+                      class="pequeno"
+                      (click)="mudarStatus(atendimento, 'F')"
+                      [disabled]="salvando()"
+                    >
+                      Concluir
+                    </button>
+                  }
+                  @if (
+                    atendimento.statusAtendimento === 'A' || atendimento.statusAtendimento === 'P'
+                  ) {
+                    <button
+                      class="pequeno perigo"
+                      (click)="mudarStatus(atendimento, 'C')"
+                      [disabled]="salvando()"
+                    >
+                      Cancelar pedido
+                    </button>
+                  }
+                  <button
                     class="pequeno perigo"
                     (click)="remover(atendimento)"
-                    [disabled]="salvando()"
+                    [disabled]="salvando() || atendimento.statusAtendimento === 'P' || atendimento.statusAtendimento === 'F'"
                   >
                     Excluir
                   </button>

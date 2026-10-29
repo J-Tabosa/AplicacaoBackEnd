@@ -1,3 +1,5 @@
+import { ConsultaIdComponent } from '../consulta-id/consulta-id';
+import { ValidacaoComponent } from '../validacao/validacao';
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -11,7 +13,7 @@ import { mensagemErro } from '../../services/erro-api';
 
 @Component({
   selector: 'app-entradas',
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [ConsultaIdComponent, ValidacaoComponent, CommonModule, FormsModule, RouterLink],
   templateUrl: './entradas.html',
 })
 export class EntradasComponent implements OnInit {
@@ -30,6 +32,22 @@ export class EntradasComponent implements OnInit {
   ) {}
   ngOnInit() {
     this.carregar();
+  }
+
+  consultarId(id: number) {
+    this.erro.set('');
+    this.carregando.set(true);
+    this.service.buscar(id).subscribe({
+      next: (dados) => {
+        this.entradas.set([dados]);
+        this.carregando.set(false);
+      },
+      error: (erro) => {
+        this.entradas.set([]);
+        this.erro.set(mensagemErro(erro));
+        this.carregando.set(false);
+      },
+    });
   }
 
   carregar() {

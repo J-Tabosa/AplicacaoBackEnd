@@ -287,6 +287,7 @@ public partial class DbAtendimentoContext : DbContext
 
         modelBuilder.Entity<Pessoa>(entity =>
         {
+            entity.HasIndex(e => e.Email, "ux_pessoa_email").IsUnique();
             entity.HasKey(e => e.Idpessoa).HasName("PRIMARY");
 
             entity.ToTable("pessoa");

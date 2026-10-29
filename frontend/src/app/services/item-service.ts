@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Item } from '../models/item';
 import { API_URL } from './api.config';
@@ -10,8 +10,15 @@ export class ItemService {
 
   constructor(private http: HttpClient) {}
 
-  listar(): Observable<Item[]> {
-    return this.http.get<Item[]>(`${this.url}`);
+  listar(
+    filtros: { nome?: string; idCategoria?: number; tipo?: string; ativo?: string } = {},
+  ): Observable<Item[]> {
+    let params = new HttpParams();
+    if (filtros.nome) params = params.set('nome', filtros.nome);
+    if (filtros.idCategoria) params = params.set('idCategoria', filtros.idCategoria);
+    if (filtros.tipo) params = params.set('tipo', filtros.tipo);
+    if (filtros.ativo) params = params.set('ativo', filtros.ativo);
+    return this.http.get<Item[]>(this.url, { params });
   }
 
   buscar(id: number): Observable<Item> {

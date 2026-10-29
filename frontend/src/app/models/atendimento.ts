@@ -7,6 +7,7 @@ export class AtendimentoItem {
   tipoItem = '';
   idFuncionario = 0;
   funcionario = '';
+  cargoFuncionario = '';
   quantidadeItem = 1;
   valorUnitarioEntrada = 0;
   subtotal = 0;

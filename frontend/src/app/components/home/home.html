@@ -25,10 +25,7 @@
       ><span>Categorias</span><strong>{{ totais().categorias }}</strong
       ><span>Organizar itens →</span></a
     >
-    <a class="cartao" routerLink="/itens"
-      ><span>Produtos e serviços</span><strong>{{ totais().itens }}</strong
-      ><span>Ver catálogo →</span></a
-    >
+
     <a class="cartao" routerLink="/entradas"
       ><span>Entradas</span><strong>{{ totais().entradas }}</strong
       ><span>Gerenciar estoque →</span></a
@@ -36,6 +33,22 @@
     <a class="cartao" routerLink="/atendimentos"
       ><span>Atendimentos</span><strong>{{ totais().atendimentos }}</strong
       ><span>Ver atendimentos →</span></a
+    >
+    <a class="cartao" routerLink="/itens"
+      ><span>Produtos</span><strong>{{ totais().produtos }}</strong
+      ><span>Consultar catálogo →</span></a
+    >
+    <a class="cartao" routerLink="/itens"
+      ><span>Serviços</span><strong>{{ totais().servicos }}</strong
+      ><span>Consultar catálogo →</span></a
+    >
+    <a class="cartao" routerLink="/estoque"
+      ><span>Unidades em estoque</span><strong>{{ totais().estoque }}</strong
+      ><span>Conferir estoque →</span></a
+    >
+    <a class="cartao" routerLink="/atendimentos"
+      ><span>Pedidos em aberto</span><strong>{{ totais().abertos }}</strong
+      ><span>Acompanhar pedidos →</span></a
     >
   </section>
 }

@@ -1,3 +1,5 @@
+import { ConsultaIdComponent } from '../consulta-id/consulta-id';
+import { ValidacaoComponent } from '../validacao/validacao';
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -11,7 +13,7 @@ import { mensagemErro } from '../../services/erro-api';
 
 @Component({
   selector: 'app-itens',
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [ConsultaIdComponent, ValidacaoComponent, CommonModule, FormsModule, RouterLink],
   templateUrl: './itens.html',
 })
 export class ItensComponent implements OnInit {
@@ -22,6 +24,10 @@ export class ItensComponent implements OnInit {
   erro = signal('');
   sucesso = signal('');
   mostrarFormulario = false;
+  detalheItem = signal<Item | null>(null);
+  nomeBusca = '';
+  categoriaBusca = 0;
+  tipoBusca = '';
   dados = new Item();
   produto = new Produto();
 
@@ -33,10 +39,32 @@ export class ItensComponent implements OnInit {
     this.carregar();
   }
 
+  consultarId(id: number) {
+    this.erro.set('');
+    this.carregando.set(true);
+    this.service.buscar(id).subscribe({
+      next: (dados) => {
+        this.itens.set([dados]);
+        this.detalheItem.set(dados);
+        this.carregando.set(false);
+      },
+      error: (erro) => {
+        this.itens.set([]);
+        this.erro.set(mensagemErro(erro));
+        this.carregando.set(false);
+      },
+    });
+  }
+
   carregar() {
+    this.detalheItem.set(null);
     this.carregando.set(true);
     forkJoin({
-      itens: this.service.listar(),
+      itens: this.service.listar({
+        nome: this.nomeBusca,
+        idCategoria: this.categoriaBusca,
+        tipo: this.tipoBusca,
+      }),
       categorias: this.categoriaService.listar(),
     }).subscribe({
       next: (dados) => {
@@ -117,6 +145,24 @@ export class ItensComponent implements OnInit {
       error: (erro) => {
         this.erro.set(mensagemErro(erro));
         this.salvando.set(false);
+      },
+    });
+  }
+
+  desativar(item: Item) {
+    const dados = structuredClone(item);
+    dados.ativoProdutoServico = 'N';
+    this.salvando.set(true);
+    this.erro.set('');
+    this.service.alterar(item.idItem, dados).subscribe({
+      next: () => {
+        this.salvando.set(false);
+        this.sucesso.set('Item desativado. O histórico foi preservado.');
+        this.carregar();
+      },
+      error: (erro) => {
+        this.salvando.set(false);
+        this.erro.set(mensagemErro(erro));
       },
     });
   }

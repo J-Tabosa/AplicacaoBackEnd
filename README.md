@@ -1,6 +1,6 @@
-# Aplicação BackEnd + Angular — Atividade 03
+# Aplicação BackEnd + Angular — Atividade 04
 
-API ASP.NET Core 8 com Entity Framework Core e Pomelo, com DTOs para receber os dados e respostas montadas nos controllers. Os três desafios da atividade estão implementados: funcionários/pessoas/endereços, entradas de produtos/estoque e atendimentos com produtos e serviços.
+API ASP.NET Core 8 com Entity Framework Core e Pomelo, com DTOs para receber os dados e respostas montadas nos controllers. Reúne a loja virtual e o painel administrativo da Estética & Bem-Estar, reutilizando pessoas, itens, estoque e atendimentos da atividade anterior. A conferência dos requisitos RF01–RF24 está em [docs/atividade04.md](docs/atividade04.md).
 
 ## Executar o sistema completo no Windows
 
@@ -46,6 +46,14 @@ Inicie o seu MySQL/MariaDB e use o **db_atendimento** que já possui. Confira se
 
 O banco precisa conter as três triggers originais e a função `fn_calcular_preco_venda`. Uma falha nelas também aparece ao cadastrar pelo Angular: mudar de interface não corrige uma função ausente no banco.
 
+### Atualização do banco para a Atividade 04
+
+No MySQL Workbench, selecione **db_atendimento** e abra `scripts/atividade04.sql`. Execute primeiro a consulta de e-mails duplicados. Se houver resultados, corrija os cadastros repetidos antes de executar o restante do arquivo. O script normaliza os e-mails e cria um índice único; CPF já possui unicidade no esquema original. E-mail vazio continua permitido e é salvo como `NULL`.
+
+Não é necessário recriar o seu banco. A API não aplica esse SQL automaticamente. O índice também impede e-mails repetidos quando dois cadastros chegam juntos.
+
+O painel agora exige identificação de um **funcionário já cadastrado**, com CPF e data de nascimento. Se já existe funcionário, use os dados dele. Somente se não existir nenhum, personalize os dados fictícios de `scripts/primeiro_funcionario.sql` antes de executá-lo no banco selecionado. Esse arquivo cadastra pessoa, endereço e vínculo de funcionário; não precisa usá-lo em um banco que já possui funcionários.
+
 ### 3. Terminal 1: iniciar a API
 
 Na raiz do repositório:
@@ -83,16 +91,28 @@ npm start
 
 O destino padrão é HTTPS 7067. `secure: false` no proxy permite que o servidor de desenvolvimento do Angular converse com o certificado local do ASP.NET.
 
-### Telas disponíveis
+### Loja e identificação
+
+A página inicial é `/loja`: catálogo de produtos e serviços ativos, filtros por nome/categoria/tipo, detalhes por ID e carrinho. O carrinho permite alterar quantidades, remover itens e mantém seu conteúdo ao recarregar a página. O cadastro público inclui pessoa e seus endereços, confere CPF/e-mail repetidos e identifica o cliente após salvar.
+
+Em **Meus pedidos**, a API usa a pessoa da sessão; passar outro ID na URL ou no JSON não permite consultar pedidos de outro cliente. A compra recebe somente IDs dos itens e quantidades. A API consulta preços e saldo novamente, grava o pedido e seus itens e confirma a transação inteira. O pedido começa aberto. O primeiro funcionário ativo por ID é usado como responsável, porque o esquema original exige um funcionário por item; o painel permite editar o responsável enquanto o pedido estiver aberto.
+
+A identificação usa **CPF e data de nascimento, sem senha**, conforme a proposta didática. A sessão fica em cookie HttpOnly; o localStorage guarda somente o carrinho. Funcionários acessam o painel; clientes acessam a loja e os próprios pedidos. Isso é identificação simplificada para a atividade, não autenticação adequada para uma loja pública em produção.
+
+No Swagger, execute `POST /api/Sessao` com `cpf` e `dataNascimento` antes das operações administrativas. O navegador reutiliza o cookie. `GET /api/Sessao` consulta a identificação e `DELETE /api/Sessao` encerra a sessão.
+
+### Telas administrativas disponíveis
 
 - **Pessoas:** cadastro, edição, exclusão e vários endereços, preservando o ID dos endereços existentes.
 - **Funcionários:** cadastro e edição da pessoa, dos endereços e dos dados profissionais na mesma operação.
 - **Categorias:** cadastro, edição e exclusão, com os conflitos de vínculo informados pela API.
 - **Produtos e serviços:** categoria, preço, situação e dados específicos de produto; também mostra o saldo atual.
 - **Entradas:** recebimento, alteração e estorno de produtos; atualiza o saldo e os preços pela API.
-- **Atendimentos:** cliente, data, itens, quantidades, preço praticado e funcionário por item; detalhes com total e endereços do cliente.
+- **Atendimentos/pedidos:** consulta por ID, filtro por situação, dados do cliente, itens, quantidades, preço praticado, funcionário e cargo, total e atualização de situação.
+- **Estoque:** listagem e consulta por ID, com descrição, categoria, preços, unidade, situação e quantidade.
+- **Resumo:** contagens reais de clientes/pessoas, funcionários, categorias, produtos, serviços, entradas, pedidos e pedidos abertos, além do total de unidades em estoque.
 
-Para experimentar, cadastre uma pessoa e um funcionário, uma categoria, um produto e um serviço. Depois registre uma entrada para o produto e crie um atendimento. Os produtos precisam de saldo; os serviços não movimentam estoque.
+Para experimentar, identifique-se com um funcionário existente e cadastre uma pessoa, uma categoria, um produto e um serviço. Depois registre uma entrada para o produto e crie um atendimento. Os produtos precisam de saldo; os serviços não movimentam estoque.
 
 ### Como ler o frontend
 
@@ -122,10 +142,11 @@ npm run build
 
 A saída Angular fica em `frontend/dist/atendimento/browser`. `npm start` usa o servidor de desenvolvimento; publicar a interface em um servidor exige configurar o encaminhamento de `/api` para a API e o retorno de `index.html` nas rotas Angular.
 
-Os testes de integração devem usar uma instância da API conectada ao banco de teste `atividade_backend_test`, preparado pelo arquivo `tests/fixtures/banco_teste.sql`. Execute os testes Python já existentes com a API de teste em execução:
+Os testes de integração devem usar uma instância da API conectada ao banco de teste `atividade_backend_test`, preparado nesta ordem: `tests/fixtures/banco_teste.sql`, `scripts/atividade04.sql` e `tests/fixtures/administrador_teste.sql`. Selecione `atividade_backend_test` antes dos dois últimos arquivos; o administrador fictício é exclusivo dos testes. Use uma instância de teste da API na porta 5089, com `ASPNETCORE_ENVIRONMENT=Development` e `ConnectionStrings__connection` apontando para esse banco, nunca para seus dados reais. Execute os testes Python já existentes com a API de teste em execução:
 
 ```powershell
 python tests/integracao_api.py --base-url http://127.0.0.1:5089
+python tests/integracao_atividade04.py --base-url http://127.0.0.1:5089
 ```
 
 Para os testes no navegador, instale o Chromium uma vez e indique o endereço dessa API de teste. O Playwright inicia o Angular automaticamente na porta 4200; feche outra instância do Angular antes de testar um destino diferente:
@@ -137,16 +158,17 @@ $env:API_TARGET = "http://127.0.0.1:5089"
 npm test
 ```
 
-O fluxo no navegador cria registros fictícios identificados por um código próprio e os remove ao terminar. Cobre todos os cadastros, múltiplos endereços, preço calculado, atendimento com produto e serviço, PUT repetido, estorno, mensagens de conflito, tela pequena e API indisponível.
+Os testes no navegador criam registros fictícios identificados por um código próprio e os removem ao terminar. Cobrem os cadastros, múltiplos endereços, preços, estoque, filtros, carrinho, identificação, compra, privacidade dos pedidos, mudança de situação, tela pequena e API indisponível. A suíte Python da Atividade 04 preserva pedidos concluídos por regra da API: recrie somente o banco isolado antes de repeti-la. Os testes usam CPF `90000000001` e nascimento `1990-01-01` da fixture; as variáveis `API_TEST_ADMIN_CPF` e `API_TEST_ADMIN_NASCIMENTO` permitem usar outro funcionário de teste.
 
-Validação da integração: backend e Angular compilados sem erros; 110 requisições HTTP aprovadas e 3 cenários no Chromium aprovados com a API em HTTP e em HTTPS, usando um banco MariaDB isolado. A compilação Angular também verifica os tipos nos templates.
+Validação da integração: backend e Angular compilados sem erros; 181 requisições HTTP aprovadas (111 do fluxo anterior e 70 da Atividade 04) e 4 cenários no Chromium aprovados com a API de teste em HTTP, usando um banco MariaDB isolado. A compilação Angular também verifica os tipos nos templates.
 
 ## Preparação
 
 1. Use o banco **db_atendimento** que você já configurou.
 2. Confira a conexão em appsettings.json, ou configure a variável ConnectionStrings__connection.
 3. Mantenha as três triggers originais fornecidas no SQL: trg_produto_estoque, trg_entrada_produto e trg_atendimentoitem_estoque, além da função fn_calcular_preco_venda.
-4. Execute dotnet restore e dotnet run. No ambiente Development, abra /swagger.
+4. Execute `scripts/atividade04.sql` no banco selecionado, conforme explicado acima.
+5. Inicie a API e o Angular com os comandos acima. No ambiente Development, abra /swagger.
 
 A API não recria o banco e não executa os scripts de teste recebidos. As tabelas esperadas são as do SQL utilizado no projeto, incluindo quantidade_item em atendimentoitem e a chave estrangeira entrada_produto → produto.
 
@@ -162,7 +184,25 @@ A API não recria o banco e não executa os scripts de teste recebidos. As tabel
 | Entradas de produtos | GET /api/EntradaProduto/all | GET /api/EntradaProduto/{id} | POST /api/EntradaProduto | PUT /api/EntradaProduto/{id} | DELETE /api/EntradaProduto/{id} |
 | Atendimentos completos | GET /api/Atendimento/all | GET /api/Atendimento/{id} | POST /api/Atendimento | PUT /api/Atendimento/{id} | DELETE /api/Atendimento/{id} |
 
-Itens de um atendimento também podem ser gerenciados individualmente:
+As consultas de categorias e itens ativos e o cadastro de cliente são públicos. As demais rotas da tabela exigem funcionário identificado. Sem sessão, a API responde 401; cliente tentando usar o painel recebe 403.
+
+Rotas acrescentadas para a loja e o estoque:
+
+| Operação | Rota | Acesso |
+|---|---|---|
+| Identificar / consultar sessão / sair | POST / GET / DELETE `/api/Sessao` | GET exige sessão |
+| Catálogo com filtros | GET `/api/Items?nome=creme&idCategoria=1&tipo=P` | Público; somente ativos |
+| Estoque completo / por ID | GET `/api/Estoque` e `/api/Estoque/{id}` | Funcionário |
+| Confirmar compra | POST `/api/Atendimento/checkout` | Pessoa identificada |
+| Próprios pedidos / detalhe | GET `/api/Atendimento/meus` e `/api/Atendimento/meus/{id}` | Dono do pedido |
+| Filtrar pedidos | GET `/api/Atendimento/all?status=A` | Funcionário |
+| Alterar situação | PUT `/api/Atendimento/{id}/status` | Funcionário |
+
+O filtro de situação aceita A/P/F/C ou seus nomes. Funcionários também podem consultar itens inativos e filtrar `ativo=S` ou `ativo=N`. O catálogo público sempre exclui inativos.
+
+Exemplo de compra: `{"itens":[{"idItem":1,"quantidadeItem":2}]}`. Preços, cliente e responsável são definidos pelo servidor. Exemplo de alteração de situação: `{"statusAtendimento":"P"}`.
+
+Itens de um atendimento **aberto** também podem ser gerenciados individualmente:
 
 - POST /api/Atendimento/{id}/itens
 - PUT /api/Atendimento/{id}/itens/{idItem}
@@ -259,7 +299,13 @@ Em alterações e exclusões, o custo/preço é recomposto pela entrada de maior
 
 Troque os IDs pelos registros do seu banco. Pessoas, funcionários e itens devem existir.
 
-O PUT completo recebe a lista final de itens. A API adiciona novos, altera os existentes e remove os omitidos. Produtos movimentam estoque; serviços não. A exclusão do atendimento devolve os produtos ao estoque. A exclusão individual do último item é bloqueada; nesse caso exclua o atendimento inteiro.
+O PUT completo recebe a lista final de itens. A API adiciona novos, altera os existentes e remove os omitidos. Produtos movimentam estoque; serviços não. A exclusão de um atendimento aberto devolve os produtos ao estoque. A exclusão individual do último item é bloqueada; nesse caso exclua o atendimento inteiro.
+
+### Situação do pedido
+
+O fluxo permitido é **A (Aberto) → P (Em processamento) → F (Concluído)**. É possível cancelar (C) a partir de A ou P. Use a rota de situação para isso; o PUT completo não muda a situação.
+
+Somente pedidos abertos permitem editar cliente/itens/responsáveis. Pedidos em processamento ou concluídos não podem ser excluídos. Cancelar devolve os produtos ao estoque uma única vez e mantém os itens e os preços no histórico. Repetir a mesma situação não duplica a movimentação. Excluir posteriormente um cancelado não devolve estoque outra vez. Serviços não movimentam estoque.
 
 ## Regras de estoque e transações
 
@@ -313,19 +359,5 @@ O nome `builder.Services` em `Program.cs` pertence à configuração do ASP.NET.
 
 As verificações que dependem de outros campos ou do banco usam `if` no controller. Os DTOs não implementam interfaces de validação e não usam `yield`.
 
-Respostas usuais: 200 consulta, 201 criação, 204 alteração/exclusão, 400 dados inválidos, 404 registro ausente e 409 conflito de estoque ou relacionamento. Cada gravação trata `DbUpdateException` no próprio controller e registra o detalhe técnico no log.
+Respostas usuais: 200 consulta, 201 criação, 204 alteração/exclusão, 400 dados inválidos, 401 sem identificação, 403 sem permissão, 404 registro ausente e 409 conflito de estoque ou relacionamento. Cada gravação trata `DbUpdateException` no próprio controller e registra o detalhe técnico no log.
 
-## Validação
-
-~~~bash
-dotnet build
-python tests/integracao_api.py --base-url http://127.0.0.1:5088
-~~~
-
-Execute o teste de integração contra uma instância da API ligada a um **banco de teste vazio**, preparado com as tabelas, a função e as três triggers originais. Ele cria cadastros fictícios, testa os CRUDs e remove os registros criados no final. Se uma verificação falhar, ele interrompe e pode deixar esses registros no banco de teste.
-
-O arquivo tests/fixtures/banco_teste.sql prepara esse esquema isolado com o nome atividade_backend_test. Configure a conexão da instância de teste para esse banco antes de rodar o script Python.
-
-O teste cobre cadastro/atualização completa de funcionário, múltiplos endereços, CPF duplicado, produtos/serviços, entradas, preços, troca do produto da entrada, atendimento N:N, itens individuais, PUT repetido, rollback, estorno de entrada já consumida e duas vendas simultâneas.
-
-Validação desta versão: `dotnet build` sem erros ou avisos e 110 requisições HTTP verificadas contra MariaDB 10.11, com a função e as três triggers de INSERT originais. Os testes também exercitam as validações numéricas com a cultura pt-BR.

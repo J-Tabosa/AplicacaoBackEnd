@@ -1,15 +1,43 @@
 <a class="pular" href="#conteudo">Pular para o conteúdo</a>
 <header class="cabecalho">
-  <a class="marca" routerLink="/inicio"
-    ><span class="marca-icone">A</span><span>Atendimento<small>GESTÃO DE CADASTROS</small></span></a
+  <a class="marca" routerLink="/loja"
+    ><span class="marca-icone">E</span
+    ><span>Estética & Bem-Estar<small>PRODUTOS E SERVIÇOS</small></span></a
   >
-  <nav aria-label="Menu principal">
-    <a routerLink="/inicio" routerLinkActive="ativo">Início</a>
-    <a routerLink="/pessoas" routerLinkActive="ativo">Pessoas</a>
-    <a routerLink="/funcionarios" routerLinkActive="ativo">Funcionários</a>
-    <a routerLink="/categorias" routerLinkActive="ativo">Categorias</a>
-    <a routerLink="/itens" routerLinkActive="ativo">Produtos e serviços</a>
-    <a routerLink="/entradas" routerLinkActive="ativo">Entradas</a>
-    <a routerLink="/atendimentos" routerLinkActive="ativo">Atendimentos</a>
+  <nav aria-label="Módulos">
+    <a routerLink="/loja" [class.ativo]="url().startsWith('/loja')">Loja virtual</a
+    ><a routerLink="/inicio" [class.ativo]="!url().startsWith('/loja')">Painel administrativo</a>
+    @if (sessao.atual(); as cliente) {
+      <span class="nome-sessao">{{ cliente.nome }}</span
+      ><button class="pequeno secundario" (click)="sair()">Sair</button>
+    } @else {
+      <a routerLink="/loja/identificar">Identificar-me</a>
+    }
   </nav>
 </header>
+@if (erro()) {
+  <div class="mensagem erro" role="alert">{{ erro() }}</div>
+}
+@if (url().startsWith('/loja')) {
+  <nav class="subnav" aria-label="Menu da loja">
+    <a routerLink="/loja" [routerLinkActiveOptions]="{ exact: true }" routerLinkActive="ativo"
+      >Catálogo</a
+    ><a routerLink="/loja" [queryParams]="{ tipo: 'P' }">Produtos</a
+    ><a routerLink="/loja" [queryParams]="{ tipo: 'S' }">Serviços</a
+    ><a routerLink="/loja/carrinho" routerLinkActive="ativo"
+      >Carrinho ({{ carrinho.quantidade() }})</a
+    ><a routerLink="/loja/pedidos" routerLinkActive="ativo">Meus pedidos</a
+    ><a routerLink="/loja/cadastro">Cadastrar cliente</a>
+  </nav>
+} @else {
+  <nav class="subnav" aria-label="Menu principal">
+    <a routerLink="/inicio" routerLinkActive="ativo">Início</a
+    ><a routerLink="/pessoas" routerLinkActive="ativo">Pessoas</a
+    ><a routerLink="/funcionarios" routerLinkActive="ativo">Funcionários</a
+    ><a routerLink="/categorias" routerLinkActive="ativo">Categorias</a
+    ><a routerLink="/itens" routerLinkActive="ativo">Produtos e serviços</a
+    ><a routerLink="/entradas" routerLinkActive="ativo">Entradas</a
+    ><a routerLink="/estoque" routerLinkActive="ativo">Estoque</a
+    ><a routerLink="/atendimentos" routerLinkActive="ativo">Atendimentos</a>
+  </nav>
+}

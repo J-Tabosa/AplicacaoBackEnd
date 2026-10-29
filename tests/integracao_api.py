@@ -4,6 +4,8 @@ Cria cadastros fictícios e verifica transações, relacionamentos e saldos reai
 Usa apenas a biblioteca padrão do Python. Veja o README antes de executar.
 """
 import argparse
+import http.cookiejar
+import os
 import concurrent.futures
 import json
 import time
@@ -14,7 +16,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--base-url', default='http://127.0.0.1:5088')
 args = parser.parse_args()
 BASE = args.base_url.rstrip('/')
-opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
 requests_count = 0
 
 
@@ -46,11 +48,13 @@ seed = int(time.time()) % 1000000000
 def person(cpf, name):
     return {
         'nome': name, 'cpf': cpf, 'dataNascimento': '2000-01-15', 'sexo': 'M',
-        'email': 'teste@example.com', 'telefone': 79999999999, 'ativoPessoa': 'S',
+        'email': f'{cpf}@example.com', 'telefone': 79999999999, 'ativoPessoa': 'S',
         'enderecos': [{'cep': '49000000', 'numero': '10', 'complemento': 'Teste A'},
                       {'cep': '49000111', 'numero': '20', 'complemento': 'Teste B'}]
     }
 
+
+call('POST', 'Sessao', {'cpf': int(os.environ.get('API_TEST_ADMIN_CPF', '90000000001')), 'dataNascimento': os.environ.get('API_TEST_ADMIN_NASCIMENTO', '1990-01-01')})
 
 categoria = call('POST', 'Categoriums', {'categoria': f'Integracao {seed}'}, 201)['idcategoria']
 cliente_data = person(10000000000 + seed, 'Cliente de integração')

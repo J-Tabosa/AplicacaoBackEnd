@@ -1,0 +1,55 @@
+<div class="titulo-pagina">
+  <div>
+    <span class="etiqueta">ACOMPANHE</span>
+    <h1>Meus pedidos</h1>
+  </div>
+  <a routerLink="/loja">Voltar ao catálogo</a>
+</div>
+@if (confirmado && detalhe()) {
+  <div class="mensagem sucesso" role="status">
+    Pedido confirmado! Aguarde o atendimento pela equipe.
+  </div>
+}
+@if (erro()) {
+  <div class="mensagem erro" role="alert">{{ erro() }}</div>
+  <a routerLink="/loja/identificar" [queryParams]="{ retorno: '/loja/pedidos' }">Identificar-me</a>
+}
+@if (carregando()) {
+  <p class="carregando">Consultando seus pedidos…</p>
+} @else if (detalhe(); as pedido) {
+  <section class="painel detalhes">
+    <app-pedido-detalhes [pedido]="pedido"></app-pedido-detalhes
+    ><a routerLink="/loja/pedidos">Ver todos os meus pedidos</a>
+  </section>
+} @else if (!erro()) {
+  <section class="painel">
+    @if (!pedidos().length) {
+      <p class="vazio">Você ainda não possui pedidos.</p>
+    } @else {
+      <div class="tabela-responsiva">
+        <table>
+          <thead>
+            <tr>
+              <th>Pedido</th>
+              <th>Data</th>
+              <th>Total</th>
+              <th>Situação</th>
+              <th>Detalhes</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (pedido of pedidos(); track pedido.idAtendimento) {
+              <tr>
+                <td>#{{ pedido.idAtendimento }}</td>
+                <td>{{ pedido.dataAtendimento | date: 'dd/MM/yyyy' : 'UTC' }}</td>
+                <td>{{ pedido.valorTotal | currency: 'BRL' }}</td>
+                <td>{{ nomeStatus(pedido.statusAtendimento) }}</td>
+                <td><a [routerLink]="['/loja/pedidos', pedido.idAtendimento]">Ver pedido</a></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+}

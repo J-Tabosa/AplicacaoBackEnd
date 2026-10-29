@@ -6,6 +6,7 @@ using AplicacaoBackEnd.Models;
 // MVC fornece ControllerBase, as rotas e as respostas HTTP.
 // EntityFrameworkCore fornece os métodos de consulta e gravação no banco.
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 
 // Agrupa esta classe com os outros controllers do projeto.
@@ -20,6 +21,7 @@ namespace AplicacaoBackEnd.Controllers;
 [ApiController]
 
 // ControllerBase fornece Ok, NotFound, BadRequest, Conflict, entre outros.
+[Authorize(Roles = "Funcionario")]
 public class CategoriumsController : ControllerBase
 {
     // _context permite acessar as tabelas do banco usando o Entity Framework.
@@ -38,6 +40,7 @@ public class CategoriumsController : ControllerBase
     }
 
     // GET /api/Categoriums: lista todas as categorias.
+    [AllowAnonymous]
     [HttpGet]
 
     // async/await permitem esperar o banco sem bloquear a execução.
@@ -72,6 +75,7 @@ public class CategoriumsController : ControllerBase
 
     // GET /api/Categoriums/5: procura uma categoria pelo ID.
     // {id:int} aceita um número inteiro na URL e o entrega ao parâmetro id.
+    [AllowAnonymous]
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetCategorium(int id)
     {

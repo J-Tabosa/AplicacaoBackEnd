@@ -1,0 +1,90 @@
+<div class="titulo-pagina">
+  <div>
+    <span class="etiqueta">SUAS ESCOLHAS</span>
+    <h1>Carrinho de compras</h1>
+  </div>
+  <a routerLink="/loja">Continuar escolhendo</a>
+</div>
+@if (erro()) {
+  <div class="mensagem erro" role="alert">{{ erro() }}</div>
+}
+@if (!carrinho.itens().length) {
+  <section class="painel vazio">
+    <strong>Seu carrinho está vazio.</strong
+    ><a routerLink="/loja">Conheça nossos produtos e serviços.</a>
+  </section>
+} @else {
+  <section class="painel">
+    <div class="tabela-responsiva">
+      <table>
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Preço unitário</th>
+            <th>Quantidade</th>
+            <th>Subtotal</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of carrinho.itens(); track item.idItem) {
+            <tr>
+              <td>
+                {{ item.item }}<br /><small>{{
+                  item.tipoItem === 'P' ? 'Produto' : 'Serviço'
+                }}</small>
+              </td>
+              <td>{{ item.preco | currency: 'BRL' }}</td>
+              <td>
+                <input
+                  class="quantidade-carrinho"
+                  type="number"
+                  min="1"
+                  step="1"
+                  [ngModel]="item.quantidadeItem"
+                  (ngModelChange)="alterar(item, $event)"
+                  [attr.aria-label]="'Quantidade de ' + item.item"
+                  [disabled]="salvando()"
+                />
+                @if (errosQuantidade()[item.idItem]) {
+                  <small class="erro-campo">{{ errosQuantidade()[item.idItem] }}</small>
+                }
+              </td>
+              <td>{{ item.preco * item.quantidadeItem | currency: 'BRL' }}</td>
+              <td>
+                <button
+                  class="perigo pequeno"
+                  (click)="carrinho.remover(item.idItem)"
+                  [disabled]="salvando()"
+                >
+                  Remover
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <div class="total">Total estimado: {{ carrinho.total() | currency: 'BRL' }}</div>
+    <p class="ajuda">
+      O estoque e os preços atuais serão conferidos ao confirmar. O pedido ficará em aberto para
+      atendimento pela equipe.
+    </p>
+    @if (sessao.atual(); as cliente) {
+      <p>
+        Pedido para <strong>{{ cliente.nome }}</strong
+        >.
+      </p>
+    } @else {
+      <p>
+        <a routerLink="/loja/identificar" [queryParams]="{ retorno: '/loja/carrinho' }"
+          >Identifique-se</a
+        >
+        ou <a routerLink="/loja/cadastro">crie seu cadastro</a> para confirmar.
+      </p>
+    }
+    <button (click)="confirmar()" [disabled]="salvando() || quantidadeInvalida()">
+      {{ salvando() ? 'Confirmando…' : 'Confirmar pedido' }}
+    </button>
+  </section>
+}

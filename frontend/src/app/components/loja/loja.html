@@ -1,0 +1,67 @@
+<section class="vitrine">
+  <span class="etiqueta">ESTÉTICA & BEM-ESTAR</span>
+  <h1>Um cuidado a mais para você.</h1>
+  <p>Explore nossos produtos e serviços. Escolha seus favoritos e acompanhe seu pedido por aqui.</p>
+  <a class="botao" routerLink="/loja/carrinho">Ver meu carrinho</a>
+</section>
+<div class="categorias-loja" aria-label="Categorias da loja">
+  <a routerLink="/loja" [queryParams]="{ tipo: tipo || null }" [class.selecionado]="!idCategoria"
+    >Todas as categorias</a
+  >
+  @for (categoria of categorias(); track categoria.idcategoria) {
+    <a
+      routerLink="/loja"
+      [queryParams]="{ idCategoria: categoria.idcategoria, tipo: tipo || null }"
+      [class.selecionado]="idCategoria === categoria.idcategoria"
+      >{{ categoria.categoria }}</a
+    >
+  }
+</div>
+<section class="painel">
+  <form class="filtros" (ngSubmit)="filtrar()">
+    <div class="campo">
+      <label for="pesquisa">Pesquisar por nome</label
+      ><input id="pesquisa" name="nome" [(ngModel)]="nome" placeholder="O que você procura?" />
+    </div>
+    <div class="campo">
+      <label for="tipo-loja">Tipo</label
+      ><select id="tipo-loja" name="tipo" [(ngModel)]="tipo">
+        <option value="">Produtos e serviços</option>
+        <option value="P">Produtos</option>
+        <option value="S">Serviços</option>
+      </select>
+    </div>
+    <div class="campo">
+      <label for="categoria-loja">Categoria</label
+      ><select id="categoria-loja" name="categoria" [(ngModel)]="idCategoria">
+        <option [ngValue]="0">Todas</option>
+        @for (categoria of categorias(); track categoria.idcategoria) {
+          <option [ngValue]="categoria.idcategoria">{{ categoria.categoria }}</option>
+        }
+      </select>
+    </div>
+    <button type="submit">Pesquisar</button><a routerLink="/loja">Limpar filtros</a>
+  </form>
+</section>
+@if (erro()) {
+  <div class="mensagem erro" role="alert">{{ erro() }}</div>
+  <button (click)="carregar()">Tentar novamente</button>
+}
+@if (sucesso()) {
+  <div class="mensagem sucesso" role="status">
+    {{ sucesso() }} <a routerLink="/loja/carrinho">Ir para o carrinho</a>
+  </div>
+}
+@if (carregando()) {
+  <p class="carregando">Carregando catálogo…</p>
+} @else if (!erro() && itens().length === 0) {
+  <div class="painel vazio">
+    <strong>Nenhum item encontrado.</strong>Tente outro nome ou categoria.
+  </div>
+} @else {
+  <section class="catalogo" aria-label="Catálogo de produtos e serviços">
+    @for (item of itens(); track item.idItem) {
+      <app-card-item [item]="item" (adicionar)="adicionar($event)"></app-card-item>
+    }
+  </section>
+}

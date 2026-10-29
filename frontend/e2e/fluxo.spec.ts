@@ -2,8 +2,9 @@ import { expect, test, Page } from '@playwright/test';
 
 test('cadastros completos, atendimento e consistência do estoque pela interface', async ({
   page,
-  request,
 }) => {
+  const request = page.request;
+  await request.post('/api/Sessao', { data: { cpf: 90000000001, dataNascimento: '1990-01-01' } });
   const codigo = String(Date.now()).slice(-8);
   const categoriaNome = `Categoria E2E ${codigo}`;
   const clienteNome = `Cliente E2E ${codigo}`;
@@ -35,7 +36,7 @@ test('cadastros completos, atendimento e consistência do estoque pela interface
     await p.getByLabel('Nome completo').fill(nome);
     await p.getByLabel('CPF', { exact: false }).fill(cpf);
     await p.getByLabel('Data de nascimento').fill('2000-01-15');
-    await p.getByLabel('E-mail').fill('e2e@example.com');
+    await p.getByLabel('E-mail').fill(cpf + '@example.com');
     await p.locator('#cep0').fill('01001000');
     await p.locator('#numero0').fill('10');
   }
@@ -43,7 +44,7 @@ test('cadastros completos, atendimento e consistência do estoque pela interface
   try {
     await page.goto('/inicio');
     await expect(page.getByRole('heading', { name: 'Bem-vindo ao Atendimento' })).toBeVisible();
-    await expect(page.locator('.resumo .cartao')).toHaveCount(6);
+    await expect(page.locator('.resumo .cartao')).toHaveCount(9);
 
     await navegar('Categorias');
     await page.getByRole('button', { name: 'Nova categoria' }).click();
@@ -110,8 +111,8 @@ test('cadastros completos, atendimento e consistência do estoque pela interface
     await navegar('Produtos e serviços');
     await page.getByRole('button', { name: 'Novo item' }).click();
     await page.getByLabel('Nome do item').fill(produtoNome);
-    await page.getByLabel('Categoria', { exact: false }).selectOption({ label: categoriaNome });
-    await page.getByLabel('Tipo', { exact: false }).selectOption('P');
+    await page.locator('#categoria').selectOption({ label: categoriaNome });
+    await page.locator('#tipo').selectOption('P');
     await page.getByLabel('Custo / preço base').fill('20');
     await page.getByLabel('Código de preço').selectOption({ label: '1 · Acréscimo de 4%' });
     await page.getByLabel('Preço de venda').fill('20.80');
@@ -123,7 +124,7 @@ test('cadastros completos, atendimento e consistência do estoque pela interface
     await estoque(produto.idItem, 0);
     await page.getByRole('button', { name: 'Novo item' }).click();
     await page.getByLabel('Nome do item').fill(servicoNome);
-    await page.getByLabel('Categoria', { exact: false }).selectOption({ label: categoriaNome });
+    await page.locator('#categoria').selectOption({ label: categoriaNome });
     await page.getByLabel('Preço do serviço').fill('50');
     await page.getByRole('button', { name: 'Salvar item' }).click();
     await expect(page.getByRole('row').filter({ hasText: servicoNome })).toBeVisible();
@@ -325,6 +326,9 @@ test('cadastros completos, atendimento e consistência do estoque pela interface
 });
 
 test('menu e formulários funcionam em tela pequena', async ({ page }) => {
+  await page.request.post('/api/Sessao', {
+    data: { cpf: 90000000001, dataNascimento: '1990-01-01' },
+  });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/pessoas');
   await page.getByRole('button', { name: 'Nova pessoa' }).click();
@@ -344,7 +348,7 @@ test('menu e formulários funcionam em tela pequena', async ({ page }) => {
 
 test('mostra a falha da API sem exibir um resumo com contagens falsas', async ({ page }) => {
   await page.route('**/api/**', (route) => route.abort());
-  await page.goto('/inicio');
+  await page.goto('/loja');
   await expect(page.getByRole('alert')).toContainText('Não foi possível acessar a API');
   await expect(page.locator('.resumo')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Tentar novamente' })).toBeVisible();

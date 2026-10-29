@@ -1,3 +1,5 @@
+import { ConsultaIdComponent } from '../consulta-id/consulta-id';
+import { ValidacaoComponent } from '../validacao/validacao';
 import { Component, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Observable } from 'rxjs';
@@ -5,7 +7,11 @@ import { Categoria } from '../../models/categoria';
 import { CategoriaService } from '../../services/categoria-service';
 import { mensagemErro } from '../../services/erro-api';
 
-@Component({ selector: 'app-categorias', imports: [FormsModule], templateUrl: './categorias.html' })
+@Component({
+  selector: 'app-categorias',
+  imports: [ConsultaIdComponent, ValidacaoComponent, FormsModule],
+  templateUrl: './categorias.html',
+})
 export class CategoriasComponent implements OnInit {
   categorias = signal<Categoria[]>([]);
   carregando = signal(true);
@@ -18,6 +24,22 @@ export class CategoriasComponent implements OnInit {
   constructor(private service: CategoriaService) {}
   ngOnInit() {
     this.carregar();
+  }
+
+  consultarId(id: number) {
+    this.erro.set('');
+    this.carregando.set(true);
+    this.service.buscar(id).subscribe({
+      next: (dados) => {
+        this.categorias.set([dados]);
+        this.carregando.set(false);
+      },
+      error: (erro) => {
+        this.categorias.set([]);
+        this.erro.set(mensagemErro(erro));
+        this.carregando.set(false);
+      },
+    });
   }
 
   carregar() {
