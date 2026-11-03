@@ -7,13 +7,13 @@ import { Item } from '../../models/item';
   selector: 'app-card-item',
   imports: [CommonModule, RouterLink],
   template: ` <article class="produto-card">
-    <a
-      class="item-simbolo"
-      [class.servico]="item.tipoItem === 'S'"
-      [routerLink]="['/loja/itens', item.idItem]"
-      [attr.aria-label]="'Ver ' + item.item"
-      >{{ item.tipoItem === 'P' ? 'P' : 'S' }}</a
-    >
+    <a class="item-simbolo" [class.servico]="item.tipoItem === 'S'"
+      [routerLink]="['/loja/itens', item.idItem]" [attr.aria-label]="'Ver ' + item.item">
+      <img [src]="item.tipoItem === 'P' ? '/images/produto.svg' : '/images/servico.svg'"
+        [alt]="item.tipoItem === 'P' ? 'Ilustração de produto de cuidados pessoais' : 'Ilustração de serviço de bem-estar'"
+        loading="lazy" />
+      <span class="tipo-imagem">{{ item.tipoItem === 'P' ? 'PRODUTO' : 'SERVIÇO' }}</span>
+    </a>
     <div class="produto-conteudo">
       <span class="etiqueta">{{ item.categoria }}</span>
       <h2>
