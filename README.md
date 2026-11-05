@@ -2,6 +2,24 @@
 
 API ASP.NET Core 8 com Entity Framework Core e Pomelo, com DTOs para receber os dados e respostas montadas nos controllers. Reúne a loja virtual e o painel administrativo da Estética & Bem-Estar, reutilizando pessoas, itens, estoque e atendimentos da atividade anterior. A conferência dos requisitos RF01–RF24 está em [docs/atividade04.md](docs/atividade04.md).
 
+## Atualização: senha e imagem do produto
+
+O login usa **e-mail ou CPF e senha**. Execute `scripts/senha_imagem_produto.sql` no banco existente antes de iniciar a nova API. O script acrescenta `pessoa.senha_hash` e cria `imagem_produto`; não apaga seus cadastros.
+
+Para o primeiro acesso de um cadastro antigo, na raiz do projeto execute:
+
+```powershell
+dotnet run --no-launch-profile -- --definir-senha
+```
+
+O terminal pede o CPF, a nova senha e a confirmação. A senha digitada não é exibida. O comando usa a conexão de `appsettings.json`, gera o hash no C# e termina sem iniciar o servidor. Não existe senha padrão nem criação pública de senha para um CPF já cadastrado. Depois de entrar como funcionário, o painel permite definir senhas dos outros cadastros.
+
+O campo Senha é obrigatório nos novos cadastros de pessoa/cliente/funcionário. Na edição, deixe senha e confirmação vazias para manter a atual. Trocar a senha encerra as sessões antigas desse cadastro. Senhas têm de 8 a 128 caracteres e nunca são retornadas nos JSONs.
+
+Em **Produtos e serviços → Novo item/Editar → Dados do produto**, selecione uma imagem PNG/JPEG/WebP de até 2 MiB. A foto será salva em BLOB no MySQL e exibida na loja, nos detalhes e no painel. É possível substituir ou remover a foto. O formulário avisa se o produto foi salvo mas o envio da imagem falhou, permitindo tentar outra vez sem duplicar o cadastro.
+
+Veja [docs/senhas-imagens.md](docs/senhas-imagens.md) para o SQL, endpoints e funcionamento do hash.
+
 ## Executar o sistema completo no Windows
 
 O backend C# continua na raiz (`Controllers`, `DTO`, `Models`, `Program.cs`). O Angular foi acrescentado somente na pasta `frontend`. São dois processos em desenvolvimento: a API na porta 7067 e a interface na porta 4200.
@@ -52,7 +70,7 @@ No MySQL Workbench, selecione **db_atendimento** e abra `scripts/atividade04.sql
 
 Não é necessário recriar o seu banco. A API não aplica esse SQL automaticamente. O índice também impede e-mails repetidos quando dois cadastros chegam juntos.
 
-O painel agora exige identificação de um **funcionário já cadastrado**, com CPF e data de nascimento. Se já existe funcionário, use os dados dele. Somente se não existir nenhum, personalize os dados fictícios de `scripts/primeiro_funcionario.sql` antes de executá-lo no banco selecionado. Esse arquivo cadastra pessoa, endereço e vínculo de funcionário; não precisa usá-lo em um banco que já possui funcionários.
+O painel exige login de um **funcionário já cadastrado**, com e-mail ou CPF e senha. Defina a primeira senha pelo comando local acima. Somente se não existir nenhum, personalize os dados fictícios de `scripts/primeiro_funcionario.sql` antes de executá-lo no banco selecionado. Esse arquivo cadastra pessoa, endereço e vínculo de funcionário; não precisa usá-lo em um banco que já possui funcionários.
 
 ### 3. Terminal 1: iniciar a API
 
@@ -97,9 +115,9 @@ A página inicial é `/loja`: catálogo de produtos e serviços ativos, filtros 
 
 Em **Meus pedidos**, a API usa a pessoa da sessão; passar outro ID na URL ou no JSON não permite consultar pedidos de outro cliente. A compra recebe somente IDs dos itens e quantidades. A API consulta preços e saldo novamente, grava o pedido e seus itens e confirma a transação inteira. O pedido começa aberto. O primeiro funcionário ativo por ID é usado como responsável, porque o esquema original exige um funcionário por item; o painel permite editar o responsável enquanto o pedido estiver aberto.
 
-A identificação usa **CPF e data de nascimento, sem senha**, conforme a proposta didática. A sessão fica em cookie HttpOnly; o localStorage guarda somente o carrinho. Funcionários acessam o painel; clientes acessam a loja e os próprios pedidos. Isso é identificação simplificada para a atividade, não autenticação adequada para uma loja pública em produção.
+O login usa **e-mail ou CPF e senha**. O C# gera e verifica o hash com `PasswordHasher<Pessoa>` (PBKDF2 com salt). A sessão fica em cookie HttpOnly; o localStorage guarda somente o carrinho. Funcionários acessam o painel; clientes acessam a loja e os próprios pedidos. Após a atualização, é necessário entrar novamente.
 
-No Swagger, execute `POST /api/Sessao` com `cpf` e `dataNascimento` antes das operações administrativas. O navegador reutiliza o cookie. `GET /api/Sessao` consulta a identificação e `DELETE /api/Sessao` encerra a sessão.
+No Swagger, execute `POST /api/Sessao` com `login` e `senha` antes das operações administrativas. O navegador reutiliza o cookie. `GET /api/Sessao` consulta a identificação e `DELETE /api/Sessao` encerra a sessão.
 
 ### Telas administrativas disponíveis
 
@@ -142,11 +160,14 @@ npm run build
 
 A saída Angular fica em `frontend/dist/atendimento/browser`. `npm start` usa o servidor de desenvolvimento; publicar a interface em um servidor exige configurar o encaminhamento de `/api` para a API e o retorno de `index.html` nas rotas Angular.
 
-Os testes de integração devem usar uma instância da API conectada ao banco de teste `atividade_backend_test`, preparado nesta ordem: `tests/fixtures/banco_teste.sql`, `scripts/atividade04.sql` e `tests/fixtures/administrador_teste.sql`. Selecione `atividade_backend_test` antes dos dois últimos arquivos; o administrador fictício é exclusivo dos testes. Use uma instância de teste da API na porta 5089, com `ASPNETCORE_ENVIRONMENT=Development` e `ConnectionStrings__connection` apontando para esse banco, nunca para seus dados reais. Execute os testes Python já existentes com a API de teste em execução:
+Os testes de integração devem usar uma instância da API conectada ao banco de teste `atividade_backend_test`, preparado nesta ordem: `tests/fixtures/banco_teste.sql`, `scripts/atividade04.sql`, `scripts/senha_imagem_produto.sql` e `tests/fixtures/administrador_teste.sql`. Selecione `atividade_backend_test` antes dos arquivos seguintes; o administrador fictício é exclusivo dos testes. Use uma instância de teste da API na porta 5089, com `ASPNETCORE_ENVIRONMENT=Development` e `ConnectionStrings__connection` apontando para esse banco, nunca para seus dados reais. Antes de iniciar a API de teste, configure a conexão para esse banco e defina a senha do administrador fictício pelo comando `dotnet run --no-launch-profile -- --definir-senha 90000000001`. Para as suítes, use apenas a senha fictícia `Teste!12345`; ela não é uma senha padrão da aplicação.
+
+Execute os testes Python com a API de teste em execução:
 
 ```powershell
 python tests/integracao_api.py --base-url http://127.0.0.1:5089
 python tests/integracao_atividade04.py --base-url http://127.0.0.1:5089
+python tests/integracao_senha_imagem.py --base-url http://127.0.0.1:5089
 ```
 
 Para os testes no navegador, instale o Chromium uma vez e indique o endereço dessa API de teste. O Playwright inicia o Angular automaticamente na porta 4200; feche outra instância do Angular antes de testar um destino diferente:
@@ -158,16 +179,16 @@ $env:API_TARGET = "http://127.0.0.1:5089"
 npm test
 ```
 
-Os testes no navegador criam registros fictícios identificados por um código próprio e os removem ao terminar. Cobrem os cadastros, múltiplos endereços, preços, estoque, filtros, carrinho, identificação, compra, privacidade dos pedidos, mudança de situação, tela pequena e API indisponível. A suíte Python da Atividade 04 preserva pedidos concluídos por regra da API: recrie somente o banco isolado antes de repeti-la. Os testes usam CPF `90000000001` e nascimento `1990-01-01` da fixture; as variáveis `API_TEST_ADMIN_CPF` e `API_TEST_ADMIN_NASCIMENTO` permitem usar outro funcionário de teste.
+Os testes no navegador criam registros fictícios identificados por um código próprio e os removem ao terminar. Cobrem os cadastros, múltiplos endereços, preços, estoque, filtros, carrinho, identificação, compra, privacidade dos pedidos, mudança de situação, tela pequena e API indisponível. A suíte Python da Atividade 04 preserva pedidos concluídos por regra da API: recrie somente o banco isolado antes de repeti-la. Os testes usam login `90000000001` e a senha fictícia `Teste!12345`, definida pelo comando local no banco de teste. As variáveis `API_TEST_ADMIN_LOGIN` e `API_TEST_ADMIN_SENHA` permitem configurar a identificação nas suítes Python. Para não atingir o limite de login durante as suítes, configure `Login__LimitePorMinuto=1000` apenas na API de teste (o padrão é 10 por minuto por IP).
 
-Validação da integração: backend e Angular compilados sem erros; 181 requisições HTTP aprovadas (111 do fluxo anterior e 70 da Atividade 04) e 4 cenários no Chromium aprovados com a API de teste em HTTP, usando um banco MariaDB isolado. A compilação Angular também verifica os tipos nos templates.
+Validação da integração: backend e Angular compilados sem erros; 244 requisições HTTP aprovadas (111 do fluxo anterior, 70 da Atividade 04 e 63 de senha/imagem) e 5 cenários no Chromium aprovados com a API de teste em HTTP, usando um banco MariaDB isolado. Também foram verificados o comando local de definição de senha, a atualização de hashes antigos e o limite de tentativas de login. A compilação Angular também verifica os tipos nos templates.
 
 ## Preparação
 
 1. Use o banco **db_atendimento** que você já configurou.
 2. Confira a conexão em appsettings.json, ou configure a variável ConnectionStrings__connection.
 3. Mantenha as três triggers originais fornecidas no SQL: trg_produto_estoque, trg_entrada_produto e trg_atendimentoitem_estoque, além da função fn_calcular_preco_venda.
-4. Execute `scripts/atividade04.sql` no banco selecionado, conforme explicado acima.
+4. Execute `scripts/atividade04.sql` e `scripts/senha_imagem_produto.sql` no banco selecionado, conforme explicado acima. Defina a primeira senha pelo comando local.
 5. Inicie a API e o Angular com os comandos acima. No ambiente Development, abra /swagger.
 
 A API não recria o banco e não executa os scripts de teste recebidos. As tabelas esperadas são as do SQL utilizado no projeto, incluindo quantidade_item em atendimentoitem e a chave estrangeira entrada_produto → produto.
@@ -221,6 +242,7 @@ O POST cria pessoa, endereços e funcionário na mesma transação. O PUT agora 
   "dataNascimento": "2000-01-15",
   "sexo": "M",
   "email": "exemplo@email.com",
+  "senha": "ExemploSeguro123",
   "telefone": 79999999999,
   "ativoPessoa": "S",
   "cargo": "Atendente",

@@ -4,7 +4,7 @@ test('cadastros completos, atendimento e consistência do estoque pela interface
   page,
 }) => {
   const request = page.request;
-  await request.post('/api/Sessao', { data: { cpf: 90000000001, dataNascimento: '1990-01-01' } });
+  await request.post('/api/Sessao', { data: { login: '90000000001', senha: 'Teste!12345' } });
   const codigo = String(Date.now()).slice(-8);
   const categoriaNome = `Categoria E2E ${codigo}`;
   const clienteNome = `Cliente E2E ${codigo}`;
@@ -37,13 +37,17 @@ test('cadastros completos, atendimento e consistência do estoque pela interface
     await p.getByLabel('CPF', { exact: false }).fill(cpf);
     await p.getByLabel('Data de nascimento').fill('2000-01-15');
     await p.getByLabel('E-mail').fill(cpf + '@example.com');
+    await p.locator('#senha').fill('Teste!12345');
+    await p.locator('#confirmarSenha').fill('Teste!12345');
     await p.locator('#cep0').fill('01001000');
     await p.locator('#numero0').fill('10');
   }
 
   try {
     await page.goto('/inicio');
-    await expect(page.getByRole('heading', { name: 'Bem-vindo ao Atendimento' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'Tudo sob controle, em um só lugar.' }),
+    ).toBeVisible();
     await expect(page.locator('.resumo .cartao')).toHaveCount(9);
 
     await navegar('Categorias');
@@ -327,7 +331,7 @@ test('cadastros completos, atendimento e consistência do estoque pela interface
 
 test('menu e formulários funcionam em tela pequena', async ({ page }) => {
   await page.request.post('/api/Sessao', {
-    data: { cpf: 90000000001, dataNascimento: '1990-01-01' },
+    data: { login: '90000000001', senha: 'Teste!12345' },
   });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/pessoas');

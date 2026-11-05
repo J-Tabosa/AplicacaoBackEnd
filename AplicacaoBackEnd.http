@@ -1,12 +1,12 @@
 @baseUrl = https://localhost:7067
 
-### Identificação antes das rotas administrativas (use CPF/nascimento de um funcionário real)
+### Login antes das rotas administrativas (use e-mail ou CPF e a senha cadastrada)
 POST {{baseUrl}}/api/Sessao
 Content-Type: application/json
 
 {
-  "cpf": 12345678901,
-  "dataNascimento": "2000-01-15"
+  "login": "12345678901",
+  "senha": "SuaSenhaAqui123"
 }
 
 ### Sessão atual (o cliente HTTP precisa preservar o cookie da resposta anterior)
@@ -73,3 +73,6 @@ Content-Type: application/json
 DELETE {{baseUrl}}/api/Sessao
 
 ### Consulte README.md e /swagger para os JSONs de POST e PUT.
+
+### A imagem é enviada como multipart/form-data, campo arquivo (use Swagger ou o formulário Angular).
+### PUT /api/Items/{id}/imagem envia/substitui; DELETE remove; GET devolve os bytes.

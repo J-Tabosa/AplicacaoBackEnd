@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace AplicacaoBackEnd.Models;
@@ -20,6 +20,10 @@ public partial class Pessoa
     public long? Telefone { get; set; }
 
     public string? AtivoPessoa { get; set; }
+
+    // Nunca é devolvido nos JSONs da API.
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string? SenhaHash { get; set; }
 
     public virtual ICollection<Atendimento> Atendimentos { get; set; } = new List<Atendimento>();
 

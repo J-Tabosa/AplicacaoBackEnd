@@ -47,14 +47,14 @@ seed = int(time.time()) % 1000000000
 
 def person(cpf, name):
     return {
-        'nome': name, 'cpf': cpf, 'dataNascimento': '2000-01-15', 'sexo': 'M',
+        'senha': 'Teste!12345', 'nome': name, 'cpf': cpf, 'dataNascimento': '2000-01-15', 'sexo': 'M',
         'email': f'{cpf}@example.com', 'telefone': 79999999999, 'ativoPessoa': 'S',
         'enderecos': [{'cep': '49000000', 'numero': '10', 'complemento': 'Teste A'},
                       {'cep': '49000111', 'numero': '20', 'complemento': 'Teste B'}]
     }
 
 
-call('POST', 'Sessao', {'cpf': int(os.environ.get('API_TEST_ADMIN_CPF', '90000000001')), 'dataNascimento': os.environ.get('API_TEST_ADMIN_NASCIMENTO', '1990-01-01')})
+call('POST', 'Sessao', {'login': os.environ.get('API_TEST_ADMIN_LOGIN', '90000000001'), 'senha': os.environ.get('API_TEST_ADMIN_SENHA', 'Teste!12345')})
 
 categoria = call('POST', 'Categoriums', {'categoria': f'Integracao {seed}'}, 201)['idcategoria']
 cliente_data = person(10000000000 + seed, 'Cliente de integração')

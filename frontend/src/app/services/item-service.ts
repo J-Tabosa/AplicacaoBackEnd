@@ -36,4 +36,13 @@ export class ItemService {
   remover(id: number): Observable<void> {
     return this.http.delete<void>(`${this.url}/${id}`);
   }
+  salvarImagem(id: number, arquivo: File) {
+    const dados = new FormData();
+    dados.append('arquivo', arquivo);
+    return this.http.put<{ imagemUrl: string }>(`${this.url}/${id}/imagem`, dados);
+  }
+
+  removerImagem(id: number) {
+    return this.http.delete<void>(`${this.url}/${id}/imagem`);
+  }
 }

@@ -13,9 +13,9 @@ export class SessaoService {
     return this.http.get<Sessao>(`${API_URL}/Sessao`).pipe(tap((sessao) => this.atual.set(sessao)));
   }
 
-  identificar(cpf: number, dataNascimento: string) {
+  identificar(login: string, senha: string) {
     return this.http
-      .post<Sessao>(`${API_URL}/Sessao`, { cpf, dataNascimento })
+      .post<Sessao>(`${API_URL}/Sessao`, { login, senha })
       .pipe(tap((sessao) => this.atual.set(sessao)));
   }
 

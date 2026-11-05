@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Pomelo.EntityFrameworkCore.MySql.Scaffolding.Internal;
@@ -51,6 +51,8 @@ public partial class DbAtendimentoContext : DbContext
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
         => optionsBuilder.UseMySql("server=localhost;port=3312;database=db_atendimento;user=root;password=root", Microsoft.EntityFrameworkCore.ServerVersion.Parse("10.4.32-mariadb"));
  */
+    public DbSet<ImagemProduto> ImagensProdutos { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder
@@ -291,6 +293,7 @@ public partial class DbAtendimentoContext : DbContext
             entity.HasKey(e => e.Idpessoa).HasName("PRIMARY");
 
             entity.ToTable("pessoa");
+            entity.Property(e => e.SenhaHash).HasColumnName("senha_hash").HasMaxLength(512);
 
             entity.HasIndex(e => e.Cpf, "cpf").IsUnique();
 
@@ -523,6 +526,19 @@ public partial class DbAtendimentoContext : DbContext
                 .HasColumnName("preco");
         });
 
+        modelBuilder.Entity<ImagemProduto>(entity =>
+        {
+            entity.ToTable("imagem_produto");
+            entity.HasKey(e => e.Iditem);
+            entity.Property(e => e.Iditem).HasColumnName("iditem").ValueGeneratedNever();
+            entity.Property(e => e.NomeArquivo).HasColumnName("nome_arquivo").HasMaxLength(120);
+            entity.Property(e => e.TipoConteudo).HasColumnName("tipo_conteudo").HasMaxLength(50);
+            entity.Property(e => e.Dados).HasColumnName("dados").HasColumnType("mediumblob");
+            entity.Property(e => e.Versao).HasColumnName("versao").HasMaxLength(32).IsFixedLength();
+            entity.Property(e => e.AtualizadoEm).HasColumnName("atualizado_em").HasColumnType("datetime(6)");
+            entity.HasOne<Produto>().WithOne().HasForeignKey<ImagemProduto>(e => e.Iditem)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
         OnModelCreatingPartial(modelBuilder);
     }
 

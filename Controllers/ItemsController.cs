@@ -44,10 +44,13 @@ public class ItemsController : ControllerBase
             .OrderBy(i => i.Iditem)
             .ToListAsync();
 
+        var ids = itens.Select(i => i.Iditem).ToList();
+        var imagens = await _context.ImagensProdutos.AsNoTracking().Where(i => ids.Contains(i.Iditem))
+            .Select(i => new { i.Iditem, i.Versao }).ToDictionaryAsync(i => i.Iditem, i => i.Versao);
         var resposta = new List<object>();
         foreach (var item in itens)
         {
-            resposta.Add(ExibirItem(item));
+            resposta.Add(ExibirItem(item, imagens.GetValueOrDefault(item.Iditem)));
         }
 
         return Ok(resposta);
@@ -69,7 +72,8 @@ public class ItemsController : ControllerBase
             return NotFound(new { mensagem = "Item não localizado." });
         }
 
-        return Ok(ExibirItem(item));
+        var versao = await _context.ImagensProdutos.Where(i => i.Iditem == id).Select(i => i.Versao).FirstOrDefaultAsync();
+        return Ok(ExibirItem(item, versao));
     }
 
     [HttpPost]
@@ -271,7 +275,7 @@ public class ItemsController : ControllerBase
         }
     }
 
-    private object ExibirItem(Item item)
+    private object ExibirItem(Item item, string? versaoImagem = null)
     {
         object? produto = null;
         if (item.Produto != null)
@@ -288,6 +292,7 @@ public class ItemsController : ControllerBase
         return new
         {
             IdItem = item.Iditem,
+            ImagemUrl = versaoImagem == null ? null : $"/api/Items/{item.Iditem}/imagem?v={versaoImagem}",
             IdCategoria = item.Idcategoria,
             Categoria = item.IdcategoriaNavigation.Categoria,
             Item = item.Item1,

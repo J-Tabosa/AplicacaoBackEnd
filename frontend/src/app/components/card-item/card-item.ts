@@ -7,11 +7,20 @@ import { Item } from '../../models/item';
   selector: 'app-card-item',
   imports: [CommonModule, RouterLink],
   template: ` <article class="produto-card">
-    <a class="item-simbolo" [class.servico]="item.tipoItem === 'S'"
-      [routerLink]="['/loja/itens', item.idItem]" [attr.aria-label]="'Ver ' + item.item">
-      <img [src]="item.tipoItem === 'P' ? '/images/produto.svg' : '/images/servico.svg'"
-        [alt]="item.tipoItem === 'P' ? 'Ilustração de produto de cuidados pessoais' : 'Ilustração de serviço de bem-estar'"
-        loading="lazy" />
+    <a
+      class="item-simbolo"
+      [class.servico]="item.tipoItem === 'S'"
+      [routerLink]="['/loja/itens', item.idItem]"
+      [attr.aria-label]="'Ver ' + item.item"
+    >
+      <img
+        [src]="
+          item.imagemUrl || (item.tipoItem === 'P' ? '/images/produto.svg' : '/images/servico.svg')
+        "
+        [alt]="item.item"
+        (error)="imagemIndisponivel($event)"
+        loading="lazy"
+      />
       <span class="tipo-imagem">{{ item.tipoItem === 'P' ? 'PRODUTO' : 'SERVIÇO' }}</span>
     </a>
     <div class="produto-conteudo">
@@ -45,4 +54,9 @@ import { Item } from '../../models/item';
 export class CardItemComponent {
   @Input({ required: true }) item!: Item;
   @Output() adicionar = new EventEmitter<Item>();
+  imagemIndisponivel(evento: Event) {
+    const imagem = evento.target as HTMLImageElement;
+    const padrao = this.item.tipoItem === 'P' ? '/images/produto.svg' : '/images/servico.svg';
+    if (!imagem.src.endsWith(padrao)) imagem.src = padrao;
+  }
 }

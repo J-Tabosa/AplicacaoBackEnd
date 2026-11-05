@@ -32,10 +32,13 @@ public class ProdutoItemController : ControllerBase
             .OrderBy(i => i.Iditem)
             .ToListAsync();
 
+        var ids = itens.Select(i => i.Iditem).ToList();
+        var imagens = await _context.ImagensProdutos.AsNoTracking().Where(i => ids.Contains(i.Iditem))
+            .Select(i => new { i.Iditem, i.Versao }).ToDictionaryAsync(i => i.Iditem, i => i.Versao);
         var resposta = new List<object>();
         foreach (var item in itens)
         {
-            resposta.Add(ExibirProduto(item));
+            resposta.Add(ExibirProduto(item, imagens.GetValueOrDefault(item.Iditem)));
         }
 
         return Ok(resposta);
@@ -56,7 +59,8 @@ public class ProdutoItemController : ControllerBase
             return NotFound(new { mensagem = "Produto não localizado." });
         }
 
-        return Ok(ExibirProduto(item));
+        var versao = await _context.ImagensProdutos.Where(i => i.Iditem == id).Select(i => i.Versao).FirstOrDefaultAsync();
+        return Ok(ExibirProduto(item, versao));
     }
 
     [HttpPost]
@@ -243,11 +247,12 @@ public class ProdutoItemController : ControllerBase
         }
     }
 
-    private object ExibirProduto(Item item)
+    private object ExibirProduto(Item item, string? versaoImagem = null)
     {
         return new
         {
             IdItem = item.Iditem,
+            ImagemUrl = versaoImagem == null ? null : $"/api/Items/{item.Iditem}/imagem?v={versaoImagem}",
             IdCategoria = item.Idcategoria,
             Item = item.Item1,
             item.DescricaoItem,

@@ -46,16 +46,16 @@ class Cliente:
 seed = int(time.time()) % 10000000
 admin, anonimo, a, b = Cliente(), Cliente(), Cliente(), Cliente()
 sessao = admin.call('POST', 'Sessao', {
-    'cpf': int(os.environ.get('API_TEST_ADMIN_CPF', '90000000001')),
-    'dataNascimento': os.environ.get('API_TEST_ADMIN_NASCIMENTO', '1990-01-01')})
+    'login': os.environ.get('API_TEST_ADMIN_LOGIN', '90000000001'),
+    'senha': os.environ.get('API_TEST_ADMIN_SENHA', 'Teste!12345')})
 assert sessao['funcionario']
 for route in ['Atendimento/all', 'Estoque', 'PessoaEndereco/all', 'Atendimento/meus']:
     anonimo.call('GET', route, expected=401)
-anonimo.call('POST', 'Sessao', {'cpf': 1, 'dataNascimento': '2000-01-01'}, 401)
+anonimo.call('POST', 'Sessao', {'login': '1', 'senha': 'incorreta'}, 401)
 
 
 def pessoa(cpf, nome, email):
-    return {'nome': nome, 'cpf': cpf, 'dataNascimento': '2000-01-15',
+    return {'senha': 'Teste!12345', 'nome': nome, 'cpf': cpf, 'dataNascimento': '2000-01-15',
             'email': email, 'ativoPessoa': 'S',
             'enderecos': [{'cep': '01001000', 'numero': '10'}]}
 
@@ -64,8 +64,8 @@ cpf_a, cpf_b = 71000000000 + seed, 72000000000 + seed
 pa = a.call('POST', 'PessoaEndereco', pessoa(cpf_a, 'Cliente A atividade04', f'a{seed}@example.com'), 201)
 pb = b.call('POST', 'PessoaEndereco', pessoa(cpf_b, 'Cliente B atividade04', f'b{seed}@example.com'), 201)
 anonimo.call('POST', 'PessoaEndereco', pessoa(73000000000 + seed, 'Email duplicado', f'A{seed}@EXAMPLE.COM'), 409)
-assert not a.call('POST', 'Sessao', {'cpf': cpf_a, 'dataNascimento': '2000-01-15'})['funcionario']
-b.call('POST', 'Sessao', {'cpf': cpf_b, 'dataNascimento': '2000-01-15'})
+assert not a.call('POST', 'Sessao', {'login': str(cpf_a), 'senha': 'Teste!12345'})['funcionario']
+b.call('POST', 'Sessao', {'login': str(cpf_b), 'senha': 'Teste!12345'})
 a.call('GET', 'Atendimento/all', expected=403)
 a.call('GET', f"PessoaEndereco/{pb['idpessoa']}", expected=403)
 a.call('POST', 'Funcionario', dict(pessoa(74000000000 + seed, 'Promocao indevida', None), cargo='Admin', dataAdmissao='2026-01-01'), 403)

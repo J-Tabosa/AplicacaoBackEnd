@@ -107,6 +107,38 @@
             />
           </div>
           <div class="campo">
+            <label for="senha">{{ dados.idpessoa ? 'Nova senha' : 'Senha *' }}</label>
+            <input
+              type="password"
+              id="senha"
+              name="senha"
+              [(ngModel)]="senha"
+              [required]="!dados.idpessoa"
+              minlength="8"
+              maxlength="128"
+              autocomplete="new-password"
+            />
+            @if (dados.idpessoa) {
+              <small class="ajuda">Deixe vazia para manter a senha atual.</small>
+            }
+          </div>
+          <div class="campo">
+            <label for="confirmarSenha">Confirmar senha</label>
+            <input
+              type="password"
+              id="confirmarSenha"
+              name="confirmarSenha"
+              [(ngModel)]="confirmarSenha"
+              [required]="!!senha"
+              minlength="8"
+              maxlength="128"
+              autocomplete="new-password"
+            />
+            @if (confirmarSenha && senha !== confirmarSenha) {
+              <small class="erro-campo" role="alert">As senhas devem ser iguais.</small>
+            }
+          </div>
+          <div class="campo">
             <label for="ativo">Situação *</label
             ><select id="ativo" name="ativo" [(ngModel)]="dados.ativoPessoa" required>
               <option value="S">Ativa</option>
@@ -194,7 +226,7 @@
           </button>
         </div>
         <div class="acoes acoes-form">
-          <button type="submit" [disabled]="form.invalid || salvando()">
+          <button type="submit" [disabled]="form.invalid || senha !== confirmarSenha || salvando()">
             {{ salvando() ? 'Salvando…' : 'Salvar cadastro' }}</button
           ><button type="button" class="secundario" (click)="mostrarFormulario = false">
             Cancelar

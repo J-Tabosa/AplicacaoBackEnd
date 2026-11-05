@@ -6,6 +6,7 @@ export class Produto {
 }
 
 export class Item {
+  imagemUrl: string | null = null;
   idItem = 0;
   idCategoria = 0;
   categoria = '';

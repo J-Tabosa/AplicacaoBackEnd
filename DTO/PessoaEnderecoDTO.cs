@@ -28,6 +28,10 @@ namespace AplicacaoBackEnd.DTO
         [RegularExpression("^[SN]$")]
         public string AtivoPessoa { get; set; } = "S";
 
+        // Obrigatória no POST. No PUT, omita ou envie null para manter a senha atual.
+        [StringLength(128, MinimumLength = 8)]
+        public string? Senha { get; set; }
+
         // Envie a lista explicitamente. No PUT ela representa a lista final de endereços.
         [Required]
         [MinLength(1)]

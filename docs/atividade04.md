@@ -42,7 +42,7 @@ Os layouts do enunciado servem de referência. A interface mantém o estilo do p
 ## Regras que ajudam a explicar o código
 
 - Pessoa continua sendo o cadastro base. Funcionário é uma pessoa com vínculo profissional. O cliente da compra é a pessoa identificada, não um ID livre recebido no JSON.
-- A sessão usa CPF e nascimento, sem senha, para atender à identificação simplificada da atividade. `SessaoController` cria o cookie; `[Authorize]` verifica a sessão e `[Authorize(Roles = "Funcionario")]` restringe o painel. Isso não substitui autenticação de produção.
+- A sessão agora usa e-mail ou CPF e senha com hash, conforme a solicitação adicional do professor. `SessaoController` cria o cookie; `[Authorize]` verifica a sessão e `[Authorize(Roles = "Funcionario")]` restringe o painel. Os cadastros antigos definem a primeira senha pelo comando local descrito no README.
 - O carrinho é temporário no navegador. Só vira registro no banco ao confirmar a compra. O backend consulta preço, situação e disponibilidade novamente.
 - Não há novas tabelas de pedido: `atendimento` é o pedido e `atendimentoitem` guarda suas linhas. O preço praticado fica na linha e não muda quando o preço do catálogo mudar.
 - O esquema exige funcionário por item. O checkout escolhe o primeiro funcionário ativo por ID como responsável inicial. O painel pode alterar esse responsável enquanto o pedido estiver aberto.
@@ -51,8 +51,8 @@ Os layouts do enunciado servem de referência. A interface mantém o estilo do p
 
 ## Preparação e validação
 
-Siga o [README](../README.md) para atualizar o índice de e-mail no banco existente, identificar um funcionário e executar os dois projetos. Os três gatilhos originais de INSERT e a função de preço precisam continuar no banco.
+Siga o [README](../README.md) para atualizar o índice de e-mail, executar o script de senha/imagem no banco existente, definir a primeira senha e fazer login como funcionário e executar os dois projetos. Os três gatilhos originais de INSERT e a função de preço precisam continuar no banco.
 
-Validação realizada em banco MariaDB 10.11 isolado, com a cultura pt-BR: build .NET, build Angular, 111 requisições do fluxo anterior, 70 requisições específicas da Atividade 04 e quatro cenários de navegador. Os testes cobrem também tentativa de consultar pedido alheio, preço adulterado, compra sem saldo, concorrência e cancelamento repetido.
+Validação realizada em banco MariaDB 10.11 isolado, com a cultura pt-BR: build .NET, build Angular, 111 requisições do fluxo anterior, 70 requisições específicas da Atividade 04, 63 de senha/imagem e cinco cenários de navegador. Os testes cobrem também tentativa de consultar pedido alheio, preço adulterado, compra sem saldo, concorrência e cancelamento repetido.
 
 As verificações automatizadas usam dados fictícios. O SQL não foi executado no banco local do aluno; `scripts/atividade04.sql` deve ser aplicado nesse banco antes da demonstração.

@@ -73,12 +73,39 @@
             placeholder="DDD e número, sem pontuação"
           />
         </div>
+        <div class="campo">
+          <label for="senha">Senha *</label>
+          <input
+            type="password"
+            id="senha"
+            name="senha"
+            [(ngModel)]="senha"
+            required
+            minlength="8"
+            maxlength="128"
+            autocomplete="new-password"
+          />
+        </div>
+        <div class="campo">
+          <label for="confirmarSenha">Confirmar senha *</label>
+          <input
+            type="password"
+            id="confirmarSenha"
+            name="confirmarSenha"
+            [(ngModel)]="confirmarSenha"
+            required
+            minlength="8"
+            maxlength="128"
+            autocomplete="new-password"
+          />
+          @if (confirmarSenha && senha !== confirmarSenha) {
+            <small class="erro-campo" role="alert">As senhas devem ser iguais.</small>
+          }
+        </div>
       </div>
       <div class="secao-form">
         <h2>Endereços</h2>
-        <p class="ajuda">
-          Informe pelo menos um endereço para o seu cadastro.
-        </p>
+        <p class="ajuda">Informe pelo menos um endereço para o seu cadastro.</p>
         @for (endereco of dados.enderecos; track $index; let i = $index) {
           <div class="endereco">
             <div class="acoes">
@@ -137,7 +164,7 @@
         </button>
       </div>
       <div class="acoes acoes-form">
-        <button type="submit" [disabled]="form.invalid || salvando()">
+        <button type="submit" [disabled]="form.invalid || senha !== confirmarSenha || salvando()">
           {{ salvando() ? 'Salvando…' : 'Salvar cadastro' }}</button
         ><button type="button" class="secundario" (click)="limpar(); form.resetForm(dados)">
           Limpar

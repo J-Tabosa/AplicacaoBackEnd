@@ -22,6 +22,9 @@ export class ValidacaoComponent {
     const textos: string[] = [];
     const nomes: Record<string, string> = {
       nome: 'Nome',
+      login: 'E-mail ou CPF',
+      senha: 'Senha',
+      confirmarSenha: 'Confirmação da senha',
       cpf: 'CPF',
       nascimento: 'Data de nascimento',
       email: 'E-mail',
@@ -45,6 +48,8 @@ export class ValidacaoComponent {
       else if (campo.hasError('email')) textos.push(`${rotulo}: informe um e-mail válido.`);
       else if (campo.hasError('pattern'))
         textos.push(`${rotulo}: confira o formato e a quantidade de dígitos.`);
+      else if (campo.hasError('minlength') || campo.hasError('maxlength'))
+        textos.push(`${rotulo}: confira a quantidade de caracteres.`);
       else if (campo.hasError('min') || campo.hasError('max'))
         textos.push(`${rotulo}: valor fora do intervalo permitido.`);
       else textos.push(`${rotulo}: confira o valor informado.`);

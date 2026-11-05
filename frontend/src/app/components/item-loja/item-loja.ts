@@ -21,7 +21,13 @@ import { mensagemErro } from '../../services/erro-api';
     @if (item(); as produto) {
       <section class="painel detalhe-produto">
         <div class="item-simbolo" [class.servico]="produto.tipoItem === 'S'">
-          {{ produto.tipoItem }}
+          <img
+            [src]="
+              produto.imagemUrl ||
+              (produto.tipoItem === 'P' ? '/images/produto.svg' : '/images/servico.svg')
+            "
+            [alt]="produto.item"
+          />
         </div>
         <div>
           <span class="etiqueta">{{ produto.categoria }} · #{{ produto.idItem }}</span>

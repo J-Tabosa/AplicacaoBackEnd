@@ -1,6 +1,7 @@
 -- Somente se o banco ainda não possui funcionários.
 -- Troque os dados fictícios abaixo pelos dados do responsável pela loja.
--- CPF + nascimento identificam a pessoa; não existe senha nesta atividade.
+-- Depois do cadastro, execute o comando local --definir-senha para este CPF.
+-- O SQL não armazena senha em texto nem cria uma senha padrão.
 START TRANSACTION;
 INSERT INTO pessoa(nome, cpf, data_nascimento, sexo, email, telefone, ativo_pessoa)
 VALUES ('Responsavel da loja', 90000000001, '1990-01-01', 'N', NULL, NULL, 'S');

@@ -15,6 +15,8 @@ import { ValidacaoComponent } from '../validacao/validacao';
 })
 export class CadastroClienteComponent {
   dados = new Pessoa();
+  senha = '';
+  confirmarSenha = '';
   cpf = '';
   telefone = '';
   erro = signal('');
@@ -33,26 +35,36 @@ export class CadastroClienteComponent {
   }
   limpar() {
     this.dados = new Pessoa();
+    this.senha = '';
+    this.confirmarSenha = '';
     this.cpf = '';
     this.telefone = '';
     this.erro.set('');
   }
   salvar() {
     if (this.salvando()) return;
+    if (this.senha.length < 8 || this.senha.length > 128 || this.senha !== this.confirmarSenha) {
+      this.erro.set('Informe senhas iguais, com 8 a 128 caracteres.');
+      return;
+    }
     this.dados.cpf = Number(this.cpf);
     this.dados.telefone = this.telefone ? Number(this.telefone) : null;
     this.dados.nome = this.dados.nome.trim();
     this.dados.email = this.dados.email?.trim() || null;
     this.salvando.set(true);
     this.erro.set('');
-    this.pessoas.adicionar(this.dados).subscribe({
+    this.pessoas.adicionar({ ...this.dados, senha: this.senha }).subscribe({
       next: () => {
-        this.sessao.identificar(this.dados.cpf, this.dados.dataNascimento).subscribe({
+        this.sessao.identificar(String(this.dados.cpf), this.senha).subscribe({
           next: () => {
+            this.senha = '';
+            this.confirmarSenha = '';
             this.salvando.set(false);
             this.router.navigate(['/loja/carrinho']);
           },
           error: () => {
+            this.senha = '';
+            this.confirmarSenha = '';
             this.salvando.set(false);
             this.sucesso.set('Cadastro salvo. Identifique-se para continuar.');
           },

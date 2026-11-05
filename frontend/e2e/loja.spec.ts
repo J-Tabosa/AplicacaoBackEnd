@@ -6,7 +6,7 @@ test('loja: filtros, carrinho, cadastro, compra, privacidade e cancelamento pela
 }) => {
   const codigo = String(Date.now()).slice(-8);
   const api = page.request;
-  await api.post('/api/Sessao', { data: { cpf: 90000000001, dataNascimento: '1990-01-01' } });
+  await api.post('/api/Sessao', { data: { login: '90000000001', senha: 'Teste!12345' } });
   const categoria = await (
     await api.post('/api/Categoriums', { data: { categoria: `Beleza ${codigo}` } })
   ).json();
@@ -81,6 +81,8 @@ test('loja: filtros, carrinho, cadastro, compra, privacidade e cancelamento pela
   await page.getByLabel('Telefone').focus();
   await expect(page.getByRole('alert')).toContainText('e-mail válido');
   await page.getByLabel('E-mail').fill(`loja${codigo}@example.com`);
+  await page.locator('#senha').fill('Teste!12345');
+  await page.locator('#confirmarSenha').fill('Teste!12345');
   await page.locator('#cep0').fill('01001000');
   await page.locator('#numero0').fill('10');
   await page.getByRole('button', { name: 'Salvar cadastro' }).click();
@@ -98,6 +100,7 @@ test('loja: filtros, carrinho, cadastro, compra, privacidade e cancelamento pela
   const outraPessoa = await outroContexto.request.post('/api/PessoaEndereco', {
     data: {
       nome: `Outro ${codigo}`,
+      senha: 'Teste!12345',
       cpf: Number(`860${codigo}`),
       dataNascimento: '2000-01-15',
       email: `outro${codigo}@example.com`,
@@ -106,7 +109,7 @@ test('loja: filtros, carrinho, cadastro, compra, privacidade e cancelamento pela
   });
   expect(outraPessoa.ok()).toBeTruthy();
   await outroContexto.request.post('/api/Sessao', {
-    data: { cpf: Number(`860${codigo}`), dataNascimento: '2000-01-15' },
+    data: { login: `860${codigo}`, senha: 'Teste!12345' },
   });
   expect(
     (await outroContexto.request.get(`/api/Atendimento/meus/${pedido.idAtendimento}`)).status(),
@@ -118,7 +121,7 @@ test('loja: filtros, carrinho, cadastro, compra, privacidade e cancelamento pela
 
   const equipe = await browser.newContext({ baseURL: 'http://127.0.0.1:4200' });
   await equipe.request.post('/api/Sessao', {
-    data: { cpf: 90000000001, dataNascimento: '1990-01-01' },
+    data: { login: '90000000001', senha: 'Teste!12345' },
   });
   const admin = await equipe.newPage();
   admin.on('dialog', (dialog) => dialog.accept());

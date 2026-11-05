@@ -27,6 +27,8 @@ export class PessoasComponent implements OnInit {
   mostrarFormulario = false;
   detalhePessoa = signal<Pessoa | Funcionario | null>(null);
   dados = new Pessoa();
+  senha = '';
+  confirmarSenha = '';
   cpf = '';
   telefone = '';
   cargo = '';
@@ -78,6 +80,8 @@ export class PessoasComponent implements OnInit {
 
   nova() {
     this.dados = new Pessoa();
+    this.senha = '';
+    this.confirmarSenha = '';
     this.cpf = '';
     this.telefone = '';
     this.cargo = '';
@@ -89,6 +93,8 @@ export class PessoasComponent implements OnInit {
 
   editar(pessoa: Pessoa | Funcionario) {
     this.dados = structuredClone(pessoa);
+    this.senha = '';
+    this.confirmarSenha = '';
     this.cpf = String(pessoa.cpf).padStart(11, '0');
     this.telefone = pessoa.telefone === null ? '' : String(pessoa.telefone);
     if ('cargo' in pessoa) {
@@ -131,6 +137,17 @@ export class PessoasComponent implements OnInit {
       this.erro.set('Informe o telefone somente com números, incluindo o DDD.');
       return;
     }
+    if (
+      (!this.dados.idpessoa && !this.senha) ||
+      (this.senha && (this.senha.length < 8 || this.senha.length > 128)) ||
+      this.senha !== this.confirmarSenha
+    ) {
+      this.erro.set(
+        'Informe senhas iguais, com 8 a 128 caracteres. Na edição, deixe as duas vazias para manter a senha atual.',
+      );
+      return;
+    }
+    this.dados.senha = this.senha || null;
     this.dados.nome = this.dados.nome.trim();
     this.dados.cpf = Number(this.cpf);
     this.dados.telefone = this.telefone ? Number(this.telefone) : null;
@@ -157,6 +174,9 @@ export class PessoasComponent implements OnInit {
       next: () => {
         this.salvando.set(false);
         this.mostrarFormulario = false;
+        this.senha = '';
+        this.confirmarSenha = '';
+        delete this.dados.senha;
         this.sucesso.set('Cadastro salvo com sucesso.');
         this.carregar();
       },

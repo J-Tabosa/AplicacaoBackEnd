@@ -4,9 +4,9 @@ namespace AplicacaoBackEnd.DTO;
 
 public class IdentificacaoDTO
 {
-    [Range(1.0, 99999999999.0)]
-    public long Cpf { get; set; }
+    [Required, StringLength(254)]
+    public string Login { get; set; } = string.Empty;
 
-    [Required]
-    public DateOnly? DataNascimento { get; set; }
+    [Required, StringLength(128)]
+    public string Senha { get; set; } = string.Empty;
 }

@@ -1,6 +1,6 @@
 import { ConsultaIdComponent } from '../consulta-id/consulta-id';
 import { ValidacaoComponent } from '../validacao/validacao';
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, ViewChild, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -16,7 +16,7 @@ import { mensagemErro } from '../../services/erro-api';
   imports: [ConsultaIdComponent, ValidacaoComponent, CommonModule, FormsModule, RouterLink],
   templateUrl: './itens.html',
 })
-export class ItensComponent implements OnInit {
+export class ItensComponent implements OnInit, OnDestroy {
   itens = signal<Item[]>([]);
   categorias = signal<Categoria[]>([]);
   carregando = signal(true);
@@ -30,6 +30,9 @@ export class ItensComponent implements OnInit {
   tipoBusca = '';
   dados = new Item();
   produto = new Produto();
+  arquivoImagem: File | null = null;
+  previaImagem: string | null = null;
+  @ViewChild('arquivoImagemInput') arquivoImagemInput?: ElementRef<HTMLInputElement>;
 
   constructor(
     private service: ItemService,
@@ -80,6 +83,7 @@ export class ItensComponent implements OnInit {
   }
 
   novo() {
+    this.limparArquivoImagem();
     this.dados = new Item();
     this.produto = new Produto();
     this.erro.set('');
@@ -88,6 +92,7 @@ export class ItensComponent implements OnInit {
   }
 
   editar(item: Item) {
+    this.limparArquivoImagem();
     this.dados = structuredClone(item);
     this.produto = item.produto ? structuredClone(item.produto) : new Produto();
     this.erro.set('');
@@ -112,11 +117,23 @@ export class ItensComponent implements OnInit {
       ? this.service.alterar(this.dados.idItem, this.dados)
       : this.service.adicionar(this.dados);
     operacao.subscribe({
-      next: () => {
-        this.salvando.set(false);
-        this.mostrarFormulario = false;
-        this.sucesso.set('Item salvo com sucesso.');
-        this.carregar();
+      next: (resposta) => {
+        // Guarda o ID: uma falha na foto não duplica o produto ao tentar de novo.
+        this.dados.idItem = this.dados.idItem || (resposta as Item).idItem;
+        if (this.dados.tipoItem === 'P' && this.arquivoImagem) {
+          this.service.salvarImagem(this.dados.idItem, this.arquivoImagem).subscribe({
+            next: () => this.concluirSalvamento(),
+            error: (erro) => {
+              this.salvando.set(false);
+              this.erro.set(
+                'O produto foi salvo, mas a imagem não: ' +
+                  mensagemErro(erro) +
+                  ' Selecione outra imagem ou tente salvar novamente.',
+              );
+              this.carregar();
+            },
+          });
+        } else this.concluirSalvamento();
       },
       error: (erro) => {
         this.erro.set(mensagemErro(erro));
@@ -165,5 +182,61 @@ export class ItensComponent implements OnInit {
         this.erro.set(mensagemErro(erro));
       },
     });
+  }
+  selecionarImagem(evento: Event) {
+    const campo = evento.target as HTMLInputElement;
+    const arquivo = campo.files?.[0];
+    this.limparArquivoImagem(false);
+    if (!arquivo) return;
+    if (
+      !['image/png', 'image/jpeg', 'image/webp'].includes(arquivo.type) ||
+      arquivo.size > 2 * 1024 * 1024 ||
+      arquivo.size === 0
+    ) {
+      this.erro.set('Selecione uma imagem PNG, JPEG ou WebP de até 2 MiB.');
+      campo.value = '';
+      return;
+    }
+    this.erro.set('');
+    this.arquivoImagem = arquivo;
+    this.previaImagem = URL.createObjectURL(arquivo);
+  }
+
+  limparArquivoImagem(limparCampo = true) {
+    if (this.previaImagem) URL.revokeObjectURL(this.previaImagem);
+    this.previaImagem = null;
+    this.arquivoImagem = null;
+    if (limparCampo && this.arquivoImagemInput) this.arquivoImagemInput.nativeElement.value = '';
+  }
+
+  removerImagem() {
+    if (!this.dados.idItem || this.salvando()) return;
+    this.salvando.set(true);
+    this.erro.set('');
+    this.service.removerImagem(this.dados.idItem).subscribe({
+      next: () => {
+        this.dados.imagemUrl = null;
+        this.limparArquivoImagem();
+        this.salvando.set(false);
+        this.sucesso.set('Imagem removida.');
+        this.carregar();
+      },
+      error: (erro) => {
+        this.salvando.set(false);
+        this.erro.set(mensagemErro(erro));
+      },
+    });
+  }
+
+  private concluirSalvamento() {
+    this.limparArquivoImagem();
+    this.salvando.set(false);
+    this.mostrarFormulario = false;
+    this.sucesso.set('Item salvo com sucesso.');
+    this.carregar();
+  }
+
+  ngOnDestroy() {
+    this.limparArquivoImagem();
   }
 }

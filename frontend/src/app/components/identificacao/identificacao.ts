@@ -11,7 +11,7 @@ import { ValidacaoComponent } from '../validacao/validacao';
   template: ` <section class="painel identificacao">
     <span class="etiqueta">SEU ACESSO</span>
     <h1>Identifique-se</h1>
-    <p>Use os dados do seu cadastro para continuar.</p>
+    <p>Entre com seu e-mail ou CPF e a senha cadastrada.</p>
     @if (erro()) {
       <div class="mensagem erro" role="alert">{{ erro() }}</div>
     }
@@ -20,26 +20,26 @@ import { ValidacaoComponent } from '../validacao/validacao';
       <fieldset [disabled]="carregando()">
         <div class="grade-form">
           <div class="campo inteiro">
-            <label for="cpf">CPF *</label
-            ><input
-              id="cpf"
-              name="cpf"
-              [(ngModel)]="cpf"
+            <label for="login">E-mail ou CPF *</label>
+            <input
+              id="login"
+              name="login"
+              [(ngModel)]="login"
               required
-              pattern="[0-9]{11}"
-              maxlength="11"
-              inputmode="numeric"
+              maxlength="254"
               autocomplete="username"
             />
           </div>
           <div class="campo inteiro">
-            <label for="nascimento">Data de nascimento *</label
-            ><input
-              type="date"
-              id="nascimento"
-              name="nascimento"
-              [(ngModel)]="nascimento"
+            <label for="senha">Senha *</label>
+            <input
+              type="password"
+              id="senha"
+              name="senha"
+              [(ngModel)]="senha"
               required
+              maxlength="128"
+              autocomplete="current-password"
             />
           </div>
         </div>
@@ -51,13 +51,13 @@ import { ValidacaoComponent } from '../validacao/validacao';
       </fieldset>
     </form>
     <p class="ajuda">
-      Funcionários já cadastrados usam os mesmos dados para abrir o painel administrativo.
+      Funcionários entram com e-mail ou CPF e senha para acessar o painel administrativo.
     </p>
   </section>`,
 })
 export class IdentificacaoComponent {
-  cpf = '';
-  nascimento = '';
+  login = '';
+  senha = '';
   erro = signal('');
   carregando = signal(false);
   constructor(
@@ -66,10 +66,12 @@ export class IdentificacaoComponent {
     private rota: ActivatedRoute,
   ) {}
   entrar() {
+    if (!this.login.trim() || !this.senha || this.carregando()) return;
     this.erro.set('');
     this.carregando.set(true);
-    this.sessao.identificar(Number(this.cpf), this.nascimento).subscribe({
+    this.sessao.identificar(this.login.trim(), this.senha).subscribe({
       next: (usuario) => {
+        this.senha = '';
         this.carregando.set(false);
         const retorno = this.rota.snapshot.queryParamMap.get('retorno');
         if (retorno && retorno.startsWith('/') && !retorno.startsWith('//')) {
@@ -84,6 +86,7 @@ export class IdentificacaoComponent {
       },
       error: (erro) => {
         this.erro.set(erro.error?.mensagem || mensagemErro(erro));
+        this.senha = '';
         this.carregando.set(false);
       },
     });

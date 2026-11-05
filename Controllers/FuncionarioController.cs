@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
+using Microsoft.AspNetCore.Identity;
 
 namespace AplicacaoBackEnd.Controllers;
 
@@ -13,11 +14,13 @@ namespace AplicacaoBackEnd.Controllers;
 public class FuncionarioController : ControllerBase
 {
     private readonly DbAtendimentoContext _context;
+    private readonly IPasswordHasher<Pessoa> _senhas;
     private readonly ILogger<FuncionarioController> _logger;
 
-    public FuncionarioController(DbAtendimentoContext context, ILogger<FuncionarioController> logger)
+    public FuncionarioController(DbAtendimentoContext context, ILogger<FuncionarioController> logger, IPasswordHasher<Pessoa> senhas)
     {
         _context = context;
+        _senhas = senhas;
         _logger = logger;
     }
 
@@ -63,6 +66,11 @@ public class FuncionarioController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> PostFuncionario(FuncionarioCadastroDTO dados)
     {
+        if (string.IsNullOrEmpty(dados.Senha))
+        {
+            return BadRequest(new { mensagem = "Informe uma senha de 8 a 128 caracteres." });
+        }
+
         if (dados.DataNascimento == null || dados.DataNascimento.Value.Year < 1000)
         {
             return BadRequest(new { mensagem = "Informe uma data de nascimento válida." });
@@ -106,6 +114,10 @@ public class FuncionarioController : ControllerBase
             pessoa.Email = dados.Email;
             pessoa.Telefone = dados.Telefone;
             pessoa.AtivoPessoa = dados.AtivoPessoa;
+            if (dados.Senha != null)
+            {
+                pessoa.SenhaHash = _senhas.HashPassword(pessoa, dados.Senha);
+            }
 
             foreach (var endereco in dados.Enderecos)
             {
@@ -228,6 +240,10 @@ public class FuncionarioController : ControllerBase
             pessoa.Email = dados.Email;
             pessoa.Telefone = dados.Telefone;
             pessoa.AtivoPessoa = dados.AtivoPessoa;
+            if (dados.Senha != null)
+            {
+                pessoa.SenhaHash = _senhas.HashPassword(pessoa, dados.Senha);
+            }
 
             // Remove somente os endereços antigos que não vieram no PUT.
             foreach (var endereco in pessoa.Enderecos.ToList())

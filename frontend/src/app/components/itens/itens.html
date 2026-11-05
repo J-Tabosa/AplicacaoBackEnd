@@ -53,6 +53,9 @@
 @if (detalheItem(); as item) {
   <section class="painel detalhes">
     <h2>#{{ item.idItem }} · {{ item.item }}</h2>
+    @if (item.imagemUrl) {
+      <img class="imagem-produto-detalhe" [src]="item.imagemUrl" [alt]="item.item" />
+    }
     <p>{{ item.descricaoItem }}</p>
     <p>
       Categoria: {{ item.categoria }} · {{ item.tipoItem === 'P' ? 'Produto' : 'Serviço' }} ·
@@ -172,6 +175,36 @@
                 />
               </div>
             </div>
+            <div class="campo inteiro">
+              <label for="imagemProduto">Imagem do produto</label>
+              <input
+                #arquivoImagemInput
+                id="imagemProduto"
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                (change)="selecionarImagem($event)"
+              />
+              <small class="ajuda"
+                >PNG, JPEG ou WebP, até 2 MiB. A imagem será enviada ao salvar o item.</small
+              >
+              @if (previaImagem || dados.imagemUrl) {
+                <img
+                  class="previa-produto"
+                  [src]="previaImagem || dados.imagemUrl"
+                  [alt]="'Imagem de ' + dados.item"
+                />
+              }
+              @if (arquivoImagem) {
+                <button type="button" class="secundario pequeno" (click)="limparArquivoImagem()">
+                  Cancelar seleção da imagem
+                </button>
+              }
+              @if (dados.imagemUrl) {
+                <button type="button" class="perigo pequeno" (click)="removerImagem()">
+                  Remover imagem atual
+                </button>
+              }
+            </div>
             <p class="ajuda">
               Ao registrar uma entrada, o preço de venda será recalculado a partir do custo recebido
               e do código de preço.
@@ -181,7 +214,11 @@
         <div class="acoes acoes-form">
           <button type="submit" [disabled]="form.invalid || !dados.idCategoria || salvando()">
             {{ salvando() ? 'Salvando…' : 'Salvar item' }}</button
-          ><button type="button" class="secundario" (click)="mostrarFormulario = false">
+          ><button
+            type="button"
+            class="secundario"
+            (click)="mostrarFormulario = false; limparArquivoImagem()"
+          >
             Cancelar
           </button>
         </div>
@@ -215,6 +252,14 @@
           @for (item of itens(); track item.idItem) {
             <tr>
               <td>
+                @if (item.imagemUrl) {
+                  <img
+                    class="miniatura-produto"
+                    [src]="item.imagemUrl"
+                    [alt]="item.item"
+                    loading="lazy"
+                  />
+                }
                 <strong>{{ item.item }}</strong
                 ><br /><small class="ajuda">{{ item.descricaoItem }}</small>
               </td>

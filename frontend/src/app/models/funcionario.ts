@@ -3,6 +3,7 @@ import { Endereco } from './endereco';
 export class Funcionario {
   idpessoa = 0;
   nome = '';
+  senha?: string | null;
   cpf = 0;
   dataNascimento = '';
   sexo: string | null = 'N';
